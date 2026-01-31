@@ -3,6 +3,12 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+# Data bulk
+*.ftm.json
+
+# Access token
+.env
+
 # C extensions
 *.so
 
