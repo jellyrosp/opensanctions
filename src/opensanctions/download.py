@@ -1,13 +1,7 @@
-import requests
 from pathlib import Path
 from typing import Optional, Union
-from dotenv import load_dotenv
-import os
 
-load_dotenv()  # reads .env from current working directory
-DELIVERY_TOKEN = os.getenv("DELIVERY_TOKEN")
-
-
+import requests
 
 
 def download_dataset_file(
@@ -16,6 +10,25 @@ def download_dataset_file(
     output_path: Optional[Union[str, Path]] = None,
     delivery_token: Optional[str] = None,
 ) -> Path:
+    """
+    Download an OpenSanctions dataset (latest or historical).
+
+    Parameters
+    ----------
+    dataset : str
+        Dataset name (e.g. "sanctions")
+    date : str
+        "latest" or a YYYYMMDD date
+    output_path : str | Path | None
+        File path or directory where the file will be saved
+    delivery_token : str | None
+        Required for historical datasets
+
+    Returns
+    -------
+    Path
+        Path to the downloaded file
+    """
 
     if date == "latest":
         base_url = "https://data.opensanctions.org"
@@ -32,31 +45,16 @@ def download_dataset_file(
         output_path = Path(f"{dataset}-{date}-entities.ftm.json")
     else:
         output_path = Path(output_path)
-
-        # 👇 THIS is the missing logic
         if output_path.exists() and output_path.is_dir():
             output_path = output_path / f"{dataset}-{date}-entities.ftm.json"
 
-    # Ensure parent directories exist
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    with requests.get(url, headers=headers, stream=True, allow_redirects=True) as r:
-        r.raise_for_status()
+    with requests.get(url, headers=headers, stream=True) as response:
+        response.raise_for_status()
         with output_path.open("wb") as f:
-            for chunk in r.iter_content(chunk_size=1024 * 1024):
+            for chunk in response.iter_content(chunk_size=1024 * 1024):
                 if chunk:
                     f.write(chunk)
 
     return output_path
-
-
-
-
-path = download_dataset_file(
-    dataset="sanctions",
-    date="20211231",
-    delivery_token=DELIVERY_TOKEN,
-    output_path="datasets/2021"
-)
-
-print(f"Downloaded to: {path.resolve()}")
