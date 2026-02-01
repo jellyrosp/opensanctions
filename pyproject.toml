@@ -1,21 +1,19 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=61", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "opensanctions"
 version = "0.1.0"
-description = "CLI and tools for processing OpenSanctions JSON-LD datasets"
+description = "OpenSanctions data processing and querying"
+authors = [{name="Luca"}, {name="Aurora"}]
 readme = "README.md"
-requires-python = ">=3.9"
-
+requires-python = ">=3.10"
 dependencies = [
     "requests",
-    "python-dotenv",
+    "python-dotenv" 
 ]
 
-[tool.setuptools]
-package-dir = {"" = "src"}
-
-[tool.setuptools.packages.find]
-where = ["src"]
+[project.scripts]
+# Global CLI entry point
+opensanctions = "opensanctions.cli:main"
