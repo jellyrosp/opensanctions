@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 
 from opensanctions.download import download_dataset_file
+from opensanctions.persons import persons_extract
 from opensanctions.config import DELIVERY_TOKEN
 
 # project root = directory containing pyproject.toml
@@ -13,6 +14,7 @@ PROJECT_ROOT = next(
 
 FUNCTIONS = {
     "download_dataset": download_dataset_file,
+    "persons_extract": persons_extract,
 }
 
 def list_functions() -> None:
@@ -58,6 +60,33 @@ def main():
         )
 
         print(f"\nDownloaded to: {path.resolve()}")
+
+
+    if func_name == "persons_extract":
+
+
+        input_map = {
+            "datasets/2021/sanctions-20211231-entities.ftm.json": "20211231",
+            "datasets/2022/sanctions-20221231-entities.ftm.json": "20221231",
+            "datasets/2023/sanctions-20231231-entities.ftm.json": "20231231",
+            "datasets/2024/sanctions-20241231-entities.ftm.json": "20241231",
+            "datasets/2025/sanctions-20251231-entities.ftm.json": "20251231",
+            "datasets/2026/sanctions-20260201-entities.ftm.json": "20260201"
+        }
+
+        for json_input, exact_date in input_map.items():
+            json_path = Path(json_input)
+            if not json_path.is_absolute():
+                json_path = PROJECT_ROOT / json_path
+
+            output_file = persons_extract(
+                json_path=json_path,
+                exact_date=exact_date,
+                project_root=PROJECT_ROOT
+            )
+
+            print(f"\nExtracted persons to: {output_file.resolve()}")
+       
 
 if __name__ == "__main__":
     main()
