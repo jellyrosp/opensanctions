@@ -37,7 +37,7 @@ with open(output_file, 'w') as f_out:
         parse_dates=['first_seen', 'last_seen']  # Optional: Parse timestamps if needed
     ):
         # Filter rows where 'prop' is "gender"
-        filtered_chunk = chunk[chunk['prop'] == 'gender']
+        filtered_chunk = chunk[(chunk['schema'] == 'Person') & (chunk['prop'] == 'gender')]
 
         # Skip empty chunks
         if filtered_chunk.empty:
