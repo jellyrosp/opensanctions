@@ -5,6 +5,7 @@ __pycache__/
 
 # Data bulk
 *.ftm.json
+*.csv
 
 # Access token
 .env
