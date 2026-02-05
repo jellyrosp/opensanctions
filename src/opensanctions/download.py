@@ -2,6 +2,11 @@ from pathlib import Path
 from typing import Optional, Union
 import requests
 
+from opensanctions.config import DELIVERY_TOKEN
+
+
+
+
 
 def download_dataset_file(
     dataset: str,
@@ -31,8 +36,7 @@ def download_dataset_file(
     Path
         Path to the downloaded file
     """
-
-    # ---- base URL and headers ----
+    # Base URL and headers
     if date == "latest":
         base_url = "https://data.opensanctions.org"
         headers = {}
@@ -44,24 +48,22 @@ def download_dataset_file(
 
     url = f"{base_url}/datasets/{date}/{dataset}/entities.ftm.json"
 
-    # ---- determine output path ----
+    # Determine output path
     if output_path is None:
-        # default: datasets/YYYY/dataset-date-entities.ftm.json
         output_path = Path(default_base_dir) / date / f"{dataset}-{date}-entities.ftm.json"
     else:
         output_path = Path(output_path)
-        # prepend default_base_dir only if provided
-        if default_base_dir:
-            output_path = Path(default_base_dir) / output_path if not output_path.is_absolute() else output_path
+        if default_base_dir and not output_path.is_absolute():
+            output_path = Path(default_base_dir) / output_path
 
-        # if output_path is a directory, append the filename
         if output_path.suffix == "":
             output_path = output_path / f"{dataset}-{date}-entities.ftm.json"
 
-    # ensure parent directories exist
+    # Ensure parent directories exist
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # ---- download ----
+    # Download the file
+    print(f"Downloading from {url}...")
     with requests.get(url, headers=headers, stream=True) as response:
         response.raise_for_status()
         with output_path.open("wb") as f:
@@ -70,3 +72,18 @@ def download_dataset_file(
                     f.write(chunk)
 
     return output_path
+
+dataset = "sanctions"
+date = "20260201"
+output_dir = Path("datasets")
+
+path = download_dataset_file(
+    dataset=dataset,
+    date=date,
+    output_path=output_dir / f"{dataset}-{date}-entities.ftm.json",
+    delivery_token=DELIVERY_TOKEN,
+)
+
+print(f"\nDownloaded to: {path.resolve()}")
+
+

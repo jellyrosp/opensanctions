@@ -2,6 +2,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 
+statement_full_csv = '/home/ljutach/Documents/auri_projects/opensanctions/datasets/2026/statements_2026.csv'
+
 
 
 statement_schema_data_types = {
@@ -70,6 +72,10 @@ valid_dataset_values_list = [
 
 
 
+
+
+
+
 def gender_source_frequency(input_file: str) -> pd.DataFrame:
     """
     Analyze the frequency of gender sources in the statements dataset,
@@ -79,8 +85,6 @@ def gender_source_frequency(input_file: str) -> pd.DataFrame:
     ----------
     input_file : str
         Path to the statements CSV file.
-    valid_dataset_values_list : list
-        List of valid dataset values.
 
     Returns
     -------
@@ -150,14 +154,30 @@ def gender_source_frequency(input_file: str) -> pd.DataFrame:
 
     gender_rows_df = pd.concat(gender_rows, ignore_index=True)
 
-    # Classify datasets into valid and non_valid
-    gender_rows_df['dataset_category'] = gender_rows_df['dataset'].apply(
-        lambda x: 'valid_dataset' if x in valid_dataset_values_list else 'non_valid_dataset'
-    )
+    # Create a set of canonical_ids that have at least one valid dataset
+    valid_canonical_ids = set()
 
-    # Frequency table
-    frequency_table = gender_rows_df['dataset_category'].value_counts().reset_index()
-    frequency_table.columns = ['dataset_category', 'count']
+    # Iterate over each canonical_id to check if any dataset is valid
+    for canonical_id in canonical_ids:
+        canonical_id_rows = gender_rows_df[gender_rows_df['canonical_id'] == canonical_id]
+        datasets = canonical_id_rows['dataset'].dropna().unique()
+
+        # Check if any dataset is in valid_dataset_values_list
+        for dataset in datasets:
+            if dataset in valid_dataset_values_list:
+                valid_canonical_ids.add(canonical_id)
+                break  # No need to check further for this canonical_id
+
+    # Get unique canonical_ids for each category
+    valid_canonical_ids_list = list(valid_canonical_ids)
+    non_valid_canonical_ids_list = [id for id in canonical_ids if id not in valid_canonical_ids]
+
+    # Frequency table based on unique canonical_ids
+    frequency_data = {
+        'dataset_category': ['valid_dataset', 'non_valid_dataset'],
+        'count': [len(valid_canonical_ids_list), len(non_valid_canonical_ids_list)]
+    }
+    frequency_table = pd.DataFrame(frequency_data)
 
     # Bar plot
     plt.figure(figsize=(8, 6))
@@ -170,10 +190,9 @@ def gender_source_frequency(input_file: str) -> pd.DataFrame:
     return frequency_table
 
 
-input_file = '/home/ljutach/Documents/auri_projects/opensanctions/datasets/2026/statements_2026.csv'
-
-frequency_table = gender_source_frequency(input_file)
+frequency_table = gender_source_frequency(statement_full_csv)
 print(frequency_table)
+
 
 
 

@@ -1,7 +1,11 @@
 import json
 from pathlib import Path
 
-def persons_extract(json_path: Path, exact_date: str, project_root: Path) -> Path:
+from opensanctions.config import PROJECT_ROOT
+
+
+
+def persons_extract(json_path: Path, exact_date: str) -> Path:
     """
     Extract Person entities from an OpenSanctions dataset and save to JSON-LD.
 
@@ -11,20 +15,14 @@ def persons_extract(json_path: Path, exact_date: str, project_root: Path) -> Pat
         Path to entities.ftm.json
     exact_date : str
         Date of the dataset (YYYYMMDD)
-    project_root : Path
-        Root of the project, used to construct output path
 
     Returns
     -------
     Path
         Path to the output JSON-LD file
     """
-
     output_list = []
     year = exact_date[:4]
-
-    # Ensure json_path is absolute
-    json_path = json_path if json_path.is_absolute() else project_root / json_path
 
     with json_path.open("r", encoding="utf-8") as f:
         for line in f:
@@ -36,7 +34,7 @@ def persons_extract(json_path: Path, exact_date: str, project_root: Path) -> Pat
                 output_list.append(obj)
 
     # Prepare output path
-    output_dir = project_root / "datasets" / year
+    output_dir = PROJECT_ROOT / "datasets" / year
     output_dir.mkdir(parents=True, exist_ok=True)
 
     output_file = output_dir / f"sanctions-{exact_date}-persons.ftm.json"
@@ -44,3 +42,22 @@ def persons_extract(json_path: Path, exact_date: str, project_root: Path) -> Pat
         json.dump(output_list, f_out, ensure_ascii=False, indent=2)
 
     return output_file
+
+input_map = {
+    "datasets/2021/sanctions-20211231-entities.ftm.json": "20211231",
+    "datasets/2022/sanctions-20221231-entities.ftm.json": "20221231",
+    "datasets/2023/sanctions-20231231-entities.ftm.json": "20231231",
+    "datasets/2024/sanctions-20241231-entities.ftm.json": "20241231",
+    "datasets/2025/sanctions-20251231-entities.ftm.json": "20251231",
+    "datasets/2026/sanctions-20260201-entities.ftm.json": "20260201"
+}
+
+for json_input, exact_date in input_map.items():
+    json_path = PROJECT_ROOT / json_input
+
+    output_file = persons_extract(
+        json_path=json_path,
+        exact_date=exact_date,
+    )
+
+    print(f"\nExtracted persons to: {output_file.resolve()}")
