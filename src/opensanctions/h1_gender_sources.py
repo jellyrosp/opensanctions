@@ -4,7 +4,7 @@ from opensanctions.const import statement_full_csv_path, statement_schema_data_t
 
 
 
-def gender_source_frequency(input_file: str) -> pd.DataFrame:
+def gender_source_frequency():
     """
     Analyze the frequency of gender sources in the statements dataset,
     filtered for rows where 'prop' is 'gender' and 'topics' is 'sanction'.
@@ -27,7 +27,7 @@ def gender_source_frequency(input_file: str) -> pd.DataFrame:
 
     # Iterate over the CSV in chunks to find canonical_ids with gender and sanction topics
     for chunk in pd.read_csv(
-        input_file,
+        statement_full_csv_path,
         chunksize=chunk_size,
         dtype=statement_schema_data_types,
         parse_dates=['first_seen', 'last_seen']
@@ -63,7 +63,7 @@ def gender_source_frequency(input_file: str) -> pd.DataFrame:
 
     # Iterate over the CSV in chunks to get gender rows for the canonical_ids
     for chunk in pd.read_csv(
-        input_file,
+        statement_full_csv_path,
         chunksize=chunk_size,
         dtype=statement_schema_data_types,
         parse_dates=['first_seen', 'last_seen']
@@ -115,11 +115,9 @@ def gender_source_frequency(input_file: str) -> pd.DataFrame:
     plt.ylabel('Count')
     plt.show()
 
-    return frequency_table
+    display(frequency_table.set_index(frequency_table.columns[0]))   
 
 
-frequency_table = gender_source_frequency(statement_full_csv_path)
-print(frequency_table)
 
 
 

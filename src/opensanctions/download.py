@@ -73,17 +73,17 @@ def download_dataset_file(
 
     return output_path
 
-dataset = "sanctions"
-date = "20260201"
-output_dir = Path("datasets")
+# dataset = "sanctions"
+# date = "20260201"
+# output_dir = Path("datasets")
 
-path = download_dataset_file(
-    dataset=dataset,
-    date=date,
-    output_path=output_dir / f"{dataset}-{date}-entities.ftm.json",
-    delivery_token=DELIVERY_TOKEN,
-)
+# path = download_dataset_file(
+#     dataset=dataset,
+#     date=date,
+#     output_path=output_dir / f"{dataset}-{date}-entities.ftm.json",
+#     delivery_token=DELIVERY_TOKEN,
+# )
 
-print(f"\nDownloaded to: {path.resolve()}")
+# print(f"\nDownloaded to: {path.resolve()}")
 
 
