@@ -1,13 +1,22 @@
 statement_full_csv_path = '/home/ljutach/Documents/auri_projects/opensanctions/datasets/2026/statements_2026.csv'
 statement_subset_csv_path = '/home/ljutach/Documents/auri_projects/opensanctions/datasets/2026/sub_statements.csv'
 
-input_map = {
+input_map_raw = {
     "datasets/2021/sanctions-20211231-entities.ftm.json": "20211231",
     "datasets/2022/sanctions-20221231-entities.ftm.json": "20221231",
     "datasets/2023/sanctions-20231231-entities.ftm.json": "20231231",
     "datasets/2024/sanctions-20241231-entities.ftm.json": "20241231",
     "datasets/2025/sanctions-20251231-entities.ftm.json": "20251231",
     "datasets/2026/sanctions-20260201-entities.ftm.json": "20260201"
+}
+
+input_map_person = {
+    "datasets/2021/sanctions-20211231-persons.ftm.json": "20211231",
+    "datasets/2022/sanctions-20221231-persons.ftm.json": "20221231",
+    "datasets/2023/sanctions-20231231-persons.ftm.json": "20231231",
+    "datasets/2024/sanctions-20241231-persons.ftm.json": "20241231",
+    "datasets/2025/sanctions-20251231-persons.ftm.json": "20251231",
+    "datasets/2026/sanctions-20260201-persons.ftm.json": "20260201"
 }
 
 statement_schema_data_types = {
