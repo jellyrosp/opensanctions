@@ -1,7 +1,11 @@
 import json
 from pathlib import Path
+from opensanctions.const import input_map
 
 from opensanctions.config import PROJECT_ROOT
+
+
+
 
 
 
@@ -43,14 +47,7 @@ def persons_extract(json_path: Path, exact_date: str) -> Path:
 
     return output_file
 
-input_map = {
-    "datasets/2021/sanctions-20211231-entities.ftm.json": "20211231",
-    "datasets/2022/sanctions-20221231-entities.ftm.json": "20221231",
-    "datasets/2023/sanctions-20231231-entities.ftm.json": "20231231",
-    "datasets/2024/sanctions-20241231-entities.ftm.json": "20241231",
-    "datasets/2025/sanctions-20251231-entities.ftm.json": "20251231",
-    "datasets/2026/sanctions-20260201-entities.ftm.json": "20260201"
-}
+
 
 for json_input, exact_date in input_map.items():
     json_path = PROJECT_ROOT / json_input
