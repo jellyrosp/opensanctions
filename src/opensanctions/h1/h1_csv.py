@@ -440,6 +440,9 @@ def csv_gender_source_frequency():
     }
     frequency_table = pd.DataFrame(frequency_data)
 
+    # Calculate relative frequency and round to 2 decimal places
+    frequency_table['relative_frequency(%)'] = round((frequency_table['count'] / 11485) * 100, 2)
+
     # Bar plot
     plt.figure(figsize=(8, 6))
     plt.bar(frequency_table['dataset_category'], frequency_table['count'], color=['green', 'red'])
