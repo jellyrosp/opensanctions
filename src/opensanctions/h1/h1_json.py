@@ -1,7 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 from IPython.display import display
-from opensanctions.const import input_map_raw, input_map_person, statement_full_csv_path, statement_subset_csv_path, total_sanctioned_individuals
+from opensanctions.const import input_map_raw, input_map_person, statement_full_csv_path, statement_subset_csv_path, total_sanctioned_individuals, total_individuals
 from opensanctions.config import PROJECT_ROOT
 import json
 
@@ -83,6 +83,8 @@ def json_total_sanctioned_individual():
     # Sort DataFrame by year for better visualization
     df = df.sort_values(by='year')
 
+    df['relative_frequency(%)'] = df.apply(lambda row: round((row['sanctioned_individuals'] / total_individuals[row['year']]) * 100, 2), axis=1)
+
     # Create bar plot
     plt.figure(figsize=(10, 6))
     plt.bar(df['year'], df['sanctioned_individuals'], color='salmon')
@@ -94,7 +96,11 @@ def json_total_sanctioned_individual():
     plt.show()
 
     # Display the table
-    display(df.set_index(df.columns[0])) 
+    display(df.set_index('year')) 
+
+
+
+
 
 
 
@@ -179,7 +185,7 @@ def json_total_sanctioned_individual_with_gender_per_year():
     df = df.sort_values(by='year')
 
     # Calculate relative frequency (percentage)
-    df['relative_frequency'] = df.apply(lambda row: round((row['sanctioned_individuals'] / total_sanctioned_individuals[row['year']]) * 100, 2), axis=1)
+    df['relative_frequency(%)'] = df.apply(lambda row: round((row['sanctioned_individuals'] / total_sanctioned_individuals[row['year']]) * 100, 2), axis=1)
 
     # Create bar plot
     plt.figure(figsize=(10, 6))
@@ -285,7 +291,7 @@ def json_total_sanction_counter_and_not_sanction_individual_with_gender_per_year
     df = df.sort_values(by='year')
 
     # Calculate relative frequency (percentage)
-    df['relative_frequency'] = df.apply(lambda row: round((row['sanction_counter_individuals'] / total_sanctioned_individuals.get(row['year'], 1)) * 100, 2), axis=1)
+    df['relative_frequency(%)'] = df.apply(lambda row: round((row['sanction_counter_individuals'] / total_sanctioned_individuals.get(row['year'], 1)) * 100, 2), axis=1)
 
     # Create bar plot
     plt.figure(figsize=(10, 6))
@@ -387,73 +393,7 @@ def json_total_sanction_counter_and_not_sanction_individual_without_gender_per_y
 
 
 
-## This function calculates the total number of unique individuals (canonical_ids) in the CSV statement dataset.
-def csv_total_individual():
-    """
-    Calculate the total number of unique individuals (canonical_ids) in the statements CSV dataset,
-    where schema is 'Person', using chunk processing for large files.
 
-    Parameters
-    ----------
-    statement_full_csv_path : str
-        The file path to the statements CSV dataset.
-    chunk_size : int, optional
-        The number of rows to process at a time (default is 50000).
-
-    Returns
-    -------
-    None
-        Prints the total count of unique individuals.
-    """
-    unique_ids = set()
-
-    chunk_size=50000
-
-    # Read the CSV file in chunks
-    for chunk in pd.read_csv(statement_full_csv_path, chunksize=chunk_size, dtype={'canonical_id': str}):
-        # Filter rows where schema is 'Person'
-        person_chunk = chunk[chunk['schema'] == 'Person']
-
-        # Add unique canonical_ids to the set
-        unique_ids.update(person_chunk['canonical_id'].dropna().unique())
-
-    # Display the result
-    print(f"Total number of unique individuals (schema == 'Person'): {len(unique_ids)}")
-
-
-
-
-def csv_total_sanction_individual():
-    """
-    Calculate the total number of unique individuals (canonical_ids) in the statements CSV dataset,
-    where schema is 'Person', using chunk processing for large files.
-
-    Parameters
-    ----------
-    statement_full_csv_path : str
-        The file path to the statements CSV dataset.
-    chunk_size : int, optional
-        The number of rows to process at a time (default is 50000).
-
-    Returns
-    -------
-    None
-        Prints the total count of unique individuals.
-    """
-    unique_ids = set()
-
-    chunk_size=50000
-
-    # Read the CSV file in chunks
-    for chunk in pd.read_csv(statement_full_csv_path, chunksize=chunk_size, dtype={'canonical_id': str}):
-        # Filter rows where schema is 'Person' and topic is 'sanction'
-        person_chunk = chunk[(chunk['schema'] == 'Person') & (chunk['prop'] == 'topics') & (chunk['value'] == 'sanction')]
-
-        # Add unique canonical_ids to the set
-        unique_ids.update(person_chunk['canonical_id'].dropna().unique())
-
-    # Display the result
-    print(f"Total number of unique individuals (schema == 'Person', topic == 'sanction'): {len(unique_ids)}")
 
 
 
