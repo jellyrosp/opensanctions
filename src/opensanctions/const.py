@@ -19,6 +19,17 @@ input_map_person = {
     "datasets/2026/sanctions-20260201-persons.ftm.json": "20260201"
 }
 
+
+total_sanctioned_individuals = {
+        '2021': 10203,
+        '2022': 16175,
+        '2023': 21100,
+        '2024': 24895,
+        '2025': 35092,
+        '2026': 35241
+    }
+
+
 statement_schema_data_types = {
         'canonical_id': 'str',
         'entity_id': 'str',

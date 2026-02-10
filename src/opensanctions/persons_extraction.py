@@ -1,12 +1,8 @@
 import json
 from pathlib import Path
-from opensanctions.const import input_map
+from opensanctions.const import input_map_raw
 
 from opensanctions.config import PROJECT_ROOT
-
-
-
-
 
 
 def persons_extract(json_path: Path, exact_date: str) -> Path:
@@ -49,7 +45,7 @@ def persons_extract(json_path: Path, exact_date: str) -> Path:
 
 
 
-for json_input, exact_date in input_map.items():
+for json_input, exact_date in input_map_raw.items():
     json_path = PROJECT_ROOT / json_input
 
     output_file = persons_extract(
