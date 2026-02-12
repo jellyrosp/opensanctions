@@ -365,6 +365,66 @@ def json_total_sanction_counter_and_not_sanction_individual_without_gender_per_y
 
 
 
+# This function calculates the frequency of gender categories (male, female, other, mixed) per sanctioned individuals.
+
+import json
+from collections import defaultdict
+
+def count_gender_categories_for_sanctioned_individuals_json(json_path):
+    """
+    Count the frequency of gender categories for sanctioned individuals in a JSON file.
+    Individuals with multiple gender values are categorized as 'mixed'.
+
+    Parameters
+    ----------
+    json_path : str
+        The file path to the JSON dataset.
+
+    Returns
+    -------
+    dict
+        A dictionary with gender categories as keys and their counts as values.
+    """
+    with open(json_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)  # data is a list of entities
+
+    # Identify sanctioned individuals
+    sanctioned_ids = set()
+    for entity in data:
+        if entity.get('schema') == 'Person':
+            topics = entity.get('properties', {}).get('topics', [])
+            if any(t in ['sanction', 'sanction.counter'] for t in topics):
+                sanctioned_ids.add(entity['id'])
+
+    # Extract gender information
+    gender_map = defaultdict(set)
+    for entity in data:
+        if entity['id'] in sanctioned_ids and 'gender' in entity.get('properties', {}):
+            genders = entity['properties']['gender']
+            if isinstance(genders, list):
+                for gender in genders:
+                    gender_map[entity['id']].add(gender.lower().strip())
+            else:
+                gender_map[entity['id']].add(genders.lower().strip())
+
+    # Categorize individuals
+    gender_categories = defaultdict(int)
+    for canonical_id, genders in gender_map.items():
+        if len(genders) > 1:
+            gender_categories['mixed'] += 1
+        else:
+            gender = next(iter(genders))
+            gender_categories[gender] += 1
+
+    return dict(gender_categories)
+
+# Example usage:
+# json_path = '/home/ljutach/Documents/auri_projects/opensanctions/datasets/2026/sanctions-20260201-persons.ftm.json'
+# result = count_gender_categories_for_sanctioned_individuals_json(json_path)
+# print(result)
+
+
+
 
 
 

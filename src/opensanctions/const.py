@@ -1,5 +1,6 @@
 statement_full_csv_path = '/home/ljutach/Documents/auri_projects/opensanctions/datasets/2026/statements_2026.csv'
-statement_subset_csv_path = '/home/ljutach/Documents/auri_projects/opensanctions/datasets/2026/sub_statements.csv'
+statement_subset_csv_path = '/home/ljutach/Documents/auri_projects/opensanctions/datasets/2026/persons_sub_statements.csv'
+persons_sub_db_path = '/home/ljutach/Documents/auri_projects/opensanctions/datasets/2026/persons_sub_statements_db.sql'
 
 input_map_raw = {
     "datasets/2021/sanctions-20211231-entities.ftm.json": "20211231",
