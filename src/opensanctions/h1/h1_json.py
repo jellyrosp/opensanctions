@@ -418,10 +418,6 @@ def count_gender_categories_for_sanctioned_individuals_json(json_path):
 
     return dict(gender_categories)
 
-# Example usage:
-# json_path = '/home/ljutach/Documents/auri_projects/opensanctions/datasets/2026/sanctions-20260201-persons.ftm.json'
-# result = count_gender_categories_for_sanctioned_individuals_json(json_path)
-# print(result)
 
 
 
