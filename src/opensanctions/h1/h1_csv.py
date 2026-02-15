@@ -90,12 +90,24 @@ def csv_total_sanctioned_individual():
 
 
 
-def persons_sub_statement_csv(output_csv_path):
+def filter_persons_by_props_and_values_csv(output_csv_path, conditions):
+    """
+    Filter a large CSV dataset to create a sub-CSV containing only rows associated with individuals
+    who meet the specified logical conditions on their prop and value pairs.
+
+    Parameters:
+    - output_csv_path: str, path to save the filtered CSV
+    - conditions: list of dicts, each dict specifies a prop, optional value(s), and whether it should be included or excluded.
+      Example: [{'prop': 'gender', 'required': True},
+                {'prop': 'topics', 'values': ['sanction', 'sanction.counter'], 'required': True}]
+      This means: include individuals who have both 'gender' and 'topics' with values 'sanction' or 'sanction.counter'.
+    """
     unique_ids = set()
+    prop_sets = {i: set() for i in range(len(conditions))}
     chunk_size = 50000
     output_rows = []
 
-    # First pass to collect unique_ids
+    # First pass to collect unique_ids based on conditions
     for chunk in pd.read_csv(statement_full_csv_path, chunksize=chunk_size, dtype={
         'canonical_id': str,
         'prop': str,
@@ -103,13 +115,34 @@ def persons_sub_statement_csv(output_csv_path):
         'schema': str
     }):
         person_chunk = chunk[chunk['schema'] == 'Person']
-        sanctioned_chunk = person_chunk[
-            (person_chunk['prop'] == 'topics') &
-            (person_chunk['value'].isin(['sanction', 'sanction.counter']))
-        ]
-        unique_ids.update(sanctioned_chunk['canonical_id'].dropna().unique())
 
-    print(f"Total number of unique sanctioned individuals: {len(unique_ids)}")
+        for i, condition in enumerate(conditions):
+            prop = condition['prop']
+            required = condition['required']
+            values = condition.get('values', None)
+
+            prop_chunk = person_chunk[person_chunk['prop'] == prop]
+            if values is not None:
+                prop_chunk = prop_chunk[prop_chunk['value'].isin(values)]
+
+            prop_sets[i].update(prop_chunk['canonical_id'].dropna().unique())
+
+    # Determine which canonical_ids meet all conditions
+    if conditions:
+        if conditions[0]['required']:
+            unique_ids = prop_sets[0].copy()
+        else:
+            unique_ids = set().union(*[s for s in prop_sets.values() if s]) - prop_sets[0]
+
+        for i, condition in enumerate(conditions[1:], start=1):
+            if condition['required']:
+                unique_ids.intersection_update(prop_sets[i])
+            else:
+                unique_ids -= prop_sets[i]
+
+    print(f"Total number of unique individuals meeting the conditions: {len(unique_ids)}")
+
+    # Calculate relative frequency if needed (assuming total individuals is 1130872)
     relative_frequency = (len(unique_ids) / 1130872) * 100
     print(f"Relative frequency: {relative_frequency:.2f}%")
 
@@ -130,9 +163,16 @@ def persons_sub_statement_csv(output_csv_path):
     else:
         print("No associated rows found.")
 
-    
-#persons_sub_statement_csv("/home/ljutach/Documents/auri_projects/opensanctions/datasets/2026/persons_sub_statements.csv")
 
+
+
+# filter_persons_by_props_and_values_csv(
+#     output_csv_path='/home/ljutach/Documents/auri_projects/opensanctions/datasets/2026/persons_topic_sub_statements.csv',
+#     conditions=[
+#         {'prop': 'gender', 'required': True},
+#         {'prop': 'topics', 'required': True}
+#     ]
+# )
 
 
 
@@ -640,8 +680,6 @@ def csv_dataset_frequency_for_sanctioned_gender():
 
     # Display frequency table
     display(frequency_table.set_index('dataset_category'))
-
-
 
 
 
