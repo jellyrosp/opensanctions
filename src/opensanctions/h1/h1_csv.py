@@ -3,7 +3,7 @@ import sqlite3
 from collections import defaultdict
 import matplotlib.pyplot as plt
 from IPython.display import display
-from opensanctions.const import statement_full_csv_path, statement_schema_data_types, valid_dataset_values_list, statement_subset_csv_path, persons_sub_db_path
+from opensanctions.const import STATEMENTS_2026_PATH, statement_full_csv_path, statement_schema_data_types, valid_dataset_values_list, statement_subset_csv_path, persons_sub_db_path
 
 
 
@@ -356,7 +356,7 @@ def csv_total_sanction_counter_and_not_sanction_individual_with_gender():
     chunk_size = 50000
 
     # First pass to collect all sanction_ids
-    for chunk in pd.read_csv(statement_full_csv_path, chunksize=chunk_size, dtype={
+    for chunk in pd.read_csv(STATEMENTS_2026_PATH, chunksize=chunk_size, dtype={
         'canonical_id': str,
         'prop': str,
         'value': str,
