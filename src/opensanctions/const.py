@@ -1,6 +1,15 @@
-statement_full_csv_path = '/home/ljutach/Documents/auri_projects/opensanctions/datasets/2026/statements_2026.csv'
-statement_subset_csv_path = '/home/ljutach/Documents/auri_projects/opensanctions/datasets/2026/persons_sub_statements.csv'
-persons_sub_db_path = '/home/ljutach/Documents/auri_projects/opensanctions/datasets/2026/persons_sub_statements_db.sql'
+import os
+from opensanctions.config import PROJECT_ROOT
+
+# Define the path to statements_2026.csv
+STATEMENT_FULL_CSV_PATH = os.path.join(PROJECT_ROOT, "datasets", "2026", "statements_2026.csv")
+statement_full_csv_path = STATEMENT_FULL_CSV_PATH  # Use the same path or define a new one
+
+STATEMENTS_SUBSET_CSV_PATH = os.path.join(PROJECT_ROOT, "datasets", "2026", "persons_sub_statements.csv")
+statement_subset_csv_path = STATEMENTS_SUBSET_CSV_PATH
+
+PERSONS_SUB_DB_PATH = os.path.join(PROJECT_ROOT, "datasets", "2026", "persons_sub_statements_db.sql")
+persons_sub_db_path = PERSONS_SUB_DB_PATH
 
 input_map_raw = {
     "datasets/2021/sanctions-20211231-entities.ftm.json": "20211231",
