@@ -1,9 +1,10 @@
 import json
+import ollama
 from pathlib import Path
 import pandas as pd
 import matplotlib.pyplot as plt
 from collections import defaultdict
-from opensanctions.const import input_map_person, country_mapping
+from opensanctions.const import sub_targets_nested_reasons_path, input_map_person, country_mapping, sanctions_taxonomy
 from opensanctions.config import PROJECT_ROOT
 
 
@@ -291,3 +292,56 @@ def json_categorical_frequency_for_sanctioned_gender_by_year(category='nationali
 
 
 
+
+# Load your JSON data from file
+with open(sub_targets_nested_reasons_path, "r") as f:
+    data = json.load(f)  # <-- This line defines "data"
+
+def classify_reason(reason: str, taxonomy: dict) -> list:
+    # Extract labels and definitions for the prompt
+    categories_with_labels = ", ".join(
+        [f"{key}: {value['label']}" for key, value in taxonomy.items()]
+    )
+    definitions = {key: value["definition"] for key, value in taxonomy.items()}
+
+    # Build the prompt with definitions
+    prompt = f"""
+    You are a sanctions classification assistant.
+    Classify the following sanctions reason into these categories:
+
+    Categories:
+    {categories_with_labels}
+
+    Definitions:
+    {json.dumps(definitions, indent=2)}
+
+    Reason: '{reason}'
+
+    Instructions:
+    - Return ONLY the category keys (e.g., "AS, SS") as a comma-separated list.
+    - If the reason does not fit any category, return 'Unclear'.
+    - If the reason fits multiple categories, include all relevant keys.
+    """
+    # Call Ollama
+    try:
+        response = ollama.generate(model="llama2", prompt=prompt)
+        return [cat.strip() for cat in response["response"].split(",")]
+    except Exception as e:
+        print(f"Error classifying reason: {reason}. Error: {e}")
+        return ["Unclear"]
+
+# Process data
+results = []
+for entry in data:  # <-- Now "data" is defined
+    for reason in entry["sanctions_reasons"][0]:
+        categories = classify_reason(reason, sanctions_taxonomy)
+        results.append({
+            "id": entry["id"],
+            "gender": entry["gender"][0],
+            "reason": reason,
+            "categories": categories
+        })
+
+# Save results for analysis
+with open("classified_results.json", "w") as f:
+    json.dump(results, f, indent=2)

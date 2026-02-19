@@ -11,6 +11,9 @@ statement_subset_csv_path = STATEMENTS_SUBSET_CSV_PATH
 PERSONS_SUB_DB_PATH = os.path.join(PROJECT_ROOT, "datasets", "2026", "persons_sub_statements_db.sql")
 persons_sub_db_path = PERSONS_SUB_DB_PATH
 
+SUB_TARGETS_NESTED_REASONS = os.path.join(PROJECT_ROOT, "datasets", "2026", "sub_targets.nested.reasons.json")
+sub_targets_nested_reasons_path = SUB_TARGETS_NESTED_REASONS
+
 input_map_raw = {
     "datasets/2021/sanctions-20211231-entities.ftm.json": "20211231",
     "datasets/2022/sanctions-20221231-entities.ftm.json": "20221231",
@@ -259,4 +262,39 @@ country_mapping = {
     'vu': 'Vanuatu',
     'ye': 'Yemen',
     'za': 'South Africa',
+}
+
+
+
+
+sanctions_taxonomy = {
+    "AS": {
+        "label": "Activity-based sanctions",
+        "definition": (
+            "Imposed on individuals for their direct involvement in sanctionable activities. "
+            "The individual has actively participated in or facilitated the sanctionable conduct."
+        )
+    },
+    "SS": {
+        "label": "Status-based sanctions",
+        "definition": (
+            "Imposed on the basis of an individual’s membership in and/or association with a "
+            "target group, regardless of any direct involvement in sanctionable conduct."
+        )
+    },
+    "PS": {
+        "label": "Profit-based sanctions",
+        "definition": (
+            "Imposed on individuals who have derived, directly or indirectly, a benefit from "
+            "the sanctionable conduct of a sanctioned person or entity, regardless of any "
+            "direct involvement in sanctionable conduct."
+        )
+    },
+    "FS": {
+        "label": "Family-member sanctions",
+        "definition": (
+            "Imposed on individuals who are related by family ties to a sanctioned individual, "
+            "regardless of any direct involvement in sanctionable conduct."
+        )
+    }
 }
