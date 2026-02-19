@@ -54,6 +54,15 @@ total_sanctioned_individuals = {
     }
 
 
+total_sanctioned_by_gender = {
+        '2021': 3289,
+        '2022': 5187,
+        '2023': 6422,
+        '2024': 7794,
+        '2025': 8618,
+        '2026': 8693
+}
+
 statement_schema_data_types = {
         'canonical_id': 'str',
         'entity_id': 'str',

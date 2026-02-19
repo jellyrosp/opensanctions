@@ -201,21 +201,21 @@ def csv_sanctioned_gender_topics_frequency(mapping_dict=None, min_count=0):
     conn.close()
 
     # Convert results to a DataFrame
-    df = pd.DataFrame(results, columns=['gender', 'topics', 'count'])
+    df = pd.DataFrame(results, columns=['Gender', 'Topics', 'count'])
 
     # Map topics codes to full names if a mapping dictionary is provided
     if mapping_dict is not None:
         df['topics_name'] = df['topics'].map(mapping_dict)
         topics_name_col = 'topics_name'
     else:
-        topics_name_col = 'topics'
-        df[topics_name_col] = df['topics']
+        topics_name_col = 'Topics'
+        df[topics_name_col] = df['Topics']
 
     # Group by gender and topics_name, summing the counts to avoid duplicates
-    df_grouped = df.groupby(['gender', topics_name_col], as_index=False).sum()
+    df_grouped = df.groupby(['Gender', topics_name_col], as_index=False).sum()
 
     # Pivot the grouped DataFrame to create a contingency table
-    contingency_table = df_grouped.pivot(index='gender', columns=topics_name_col, values='count').fillna(0)
+    contingency_table = df_grouped.pivot(index='Gender', columns=topics_name_col, values='count').fillna(0)
 
     # Transpose the contingency table to reverse the axis order
     transposed_contingency_table = contingency_table.T
@@ -227,19 +227,19 @@ def csv_sanctioned_gender_topics_frequency(mapping_dict=None, min_count=0):
     relative_frequency_table = relative_frequency_table.round(2)
 
     # Filter topics with total count >= min_count for the plot
-    topics_counts = df.groupby('topics')['count'].sum()
+    topics_counts = df.groupby('Topics')['count'].sum()
     valid_topics = topics_counts[topics_counts >= min_count].index
-    filtered_df = df[df['topics'].isin(valid_topics)].copy()
+    filtered_df = df[df['Topics'].isin(valid_topics)].copy()
 
     # Map topics names for filtered data if a mapping dictionary is provided
     if mapping_dict is not None:
-        filtered_df.loc[:, topics_name_col] = filtered_df['topics'].map(mapping_dict)
+        filtered_df.loc[:, topics_name_col] = filtered_df['Topics'].map(mapping_dict)
 
     # Group by gender and topics_name for filtered data
-    filtered_df_grouped = filtered_df.groupby(['gender', topics_name_col], as_index=False).sum()
+    filtered_df_grouped = filtered_df.groupby(['Gender', topics_name_col], as_index=False).sum()
 
     # Pivot the filtered DataFrame to create a contingency table for the plot
-    filtered_contingency_table = filtered_df_grouped.pivot(index='gender', columns=topics_name_col, values='count').fillna(0)
+    filtered_contingency_table = filtered_df_grouped.pivot(index='Gender', columns=topics_name_col, values='count').fillna(0)
 
     # Transpose the filtered contingency table to swap axes
     transposed_table = filtered_contingency_table.T
@@ -248,7 +248,7 @@ def csv_sanctioned_gender_topics_frequency(mapping_dict=None, min_count=0):
     normalized_table = transposed_table.div(transposed_table.sum(axis=1), axis=0) * 100
 
     # Create a diverging stacked bar chart with relative frequencies
-    plt.figure(figsize=(12, 6))
+    
     ax = normalized_table.plot(kind='bar', stacked=True, color=['lightgreen', 'darkred'], figsize=(12, 6))
 
     # Customize the plot
@@ -372,18 +372,18 @@ def csv_sanctioned_gender_specific_topics_frequency(gender, min_count=0):
     conn.close()
 
     # Convert results to a DataFrame
-    df = pd.DataFrame(results, columns=['topics', 'count', 'relative_frequency'])
+    df = pd.DataFrame(results, columns=['Topics', 'Frequency', 'Relative Frequency'])
 
     # Filter topics with count >= min_count
     if min_count > 0:
-        df = df[df['count'] >= min_count]
+        df = df[df['Frequency'] >= min_count]
 
     # Create a bar plot with relative frequencies
     plt.figure(figsize=(12, 6))
-    ax = plt.bar(df['topics'], df['relative_frequency'], color='darkred')
+    ax = plt.bar(df['Topics'], df['Relative Frequency'], color='darkred')
 
     # Customize the plot
-    plt.title(f'Relative Frequency of Topics for {gender.capitalize()} (Count >= {min_count})')
+    plt.title(f'Relative Frequency of Topics for Gender {gender.capitalize()} (Count >= {min_count})')
     plt.xlabel('Topics')
     plt.ylabel('Relative Frequency (%)')
     plt.xticks(rotation=45, ha='right')

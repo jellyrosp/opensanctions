@@ -1,7 +1,8 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+from collections import defaultdict
 from IPython.display import display
-from opensanctions.const import input_map_raw, input_map_person, statement_full_csv_path, statement_subset_csv_path, total_sanctioned_individuals, total_individuals
+from opensanctions.const import input_map_raw, input_map_person, statement_full_csv_path, statement_subset_csv_path, total_sanctioned_individuals, total_individuals, total_sanctioned_by_gender
 from opensanctions.config import PROJECT_ROOT
 import json
 
@@ -75,28 +76,28 @@ def json_total_sanctioned_individual():
             continue
 
         year = exact_date[:4]
-        results.append({'year': year, 'sanctioned_individuals': len(sanctioned_ids)})
+        results.append({'Year': year, 'Sanctioned Individuals': len(sanctioned_ids)})
 
     # Convert results to DataFrame
     df = pd.DataFrame(results)
 
     # Sort DataFrame by year for better visualization
-    df = df.sort_values(by='year')
+    df = df.sort_values(by='Year')
 
-    df['relative_frequency(%)'] = df.apply(lambda row: round((row['sanctioned_individuals'] / total_individuals[row['year']]) * 100, 2), axis=1)
+    df['Relative Frequency(%)'] = df.apply(lambda row: round((row['Sanctioned Individuals'] / total_individuals[row['Year']]) * 100, 2), axis=1)
 
     # Create bar plot
     plt.figure(figsize=(10, 6))
-    plt.bar(df['year'], df['sanctioned_individuals'], color='salmon')
+    plt.bar(df['Year'], df['Sanctioned Individuals'], color='salmon')
     plt.xlabel('Year')
     plt.ylabel('Number of Sanctioned Individuals')
-    plt.title('Total Number of Sanctioned Individuals per Year')
-    plt.xticks(df['year'])
+    plt.title('Distribution of Sanctioned Individuals per Year')
+    plt.xticks(df['Year'])
     plt.grid(axis='y', linestyle='--', alpha=0.7)
     plt.show()
 
     # Display the table
-    display(df.set_index('year')) 
+    display(df.set_index('Year')) 
 
 
 
@@ -176,29 +177,29 @@ def json_total_sanctioned_individual_with_gender_per_year():
             continue
 
         year = exact_date[:4]
-        results.append({'year': year, 'sanctioned_individuals': len(sanctioned_ids)})
+        results.append({'Year': year, 'Sanctioned Individuals': len(sanctioned_ids)})
 
     # Convert results to DataFrame
     df = pd.DataFrame(results)
 
     # Sort DataFrame by year for better visualization
-    df = df.sort_values(by='year')
+    df = df.sort_values(by='Year')
 
     # Calculate relative frequency (percentage)
-    df['relative_frequency(%)'] = df.apply(lambda row: round((row['sanctioned_individuals'] / total_sanctioned_individuals[row['year']]) * 100, 2), axis=1)
+    df['Relative Frequency(%)'] = df.apply(lambda row: round((row['Sanctioned Individuals'] / total_sanctioned_by_gender[row['Year']]) * 100, 2), axis=1)
 
     # Create bar plot
     plt.figure(figsize=(10, 6))
-    plt.bar(df['year'], df['sanctioned_individuals'], color='salmon')
+    plt.bar(df['Year'], df['Sanctioned Individuals'], color='salmon')
     plt.xlabel('Year')
-    plt.ylabel('Number of Sanctioned Individuals having Gender')
-    plt.title('Total Number of Sanctioned Individuals with Gender per Year')
-    plt.xticks(df['year'])
+    plt.ylabel('Number of Sanctioned Individuals with Gender')
+    plt.title('Distribution of Sanctioned Individuals with Gender per Year')
+    plt.xticks(df['Year'])
     plt.grid(axis='y', linestyle='--', alpha=0.7)
     plt.show()
 
     # Display the table
-    display(df.set_index('year'))
+    display(df.set_index('Year'))
 
 
 
@@ -367,61 +368,95 @@ def json_total_sanction_counter_and_not_sanction_individual_without_gender_per_y
 
 # This function calculates the frequency of gender categories (male, female, other, mixed) per sanctioned individuals.
 
-import json
-from collections import defaultdict
+def count_gender_categories_for_sanctioned_individuals_json():
+    results = []
 
-def count_gender_categories_for_sanctioned_individuals_json(json_path):
-    """
-    Count the frequency of gender categories for sanctioned individuals in a JSON file.
-    Individuals with multiple gender values are categorized as 'mixed'.
+    for json_path_str, exact_date in input_map_person.items():
+        json_path = PROJECT_ROOT / json_path_str
+        gender_categories = defaultdict(int)
 
-    Parameters
-    ----------
-    json_path : str
-        The file path to the JSON dataset.
+        try:
+            with json_path.open("r", encoding="utf-8") as f:
+                data = json.load(f)  # data is a list of entities
 
-    Returns
-    -------
-    dict
-        A dictionary with gender categories as keys and their counts as values.
-    """
-    with open(json_path, 'r', encoding='utf-8') as f:
-        data = json.load(f)  # data is a list of entities
+            # Identify sanctioned individuals
+            sanctioned_ids = set()
+            for entity in data:
+                if entity.get('schema') == 'Person':
+                    topics = entity.get('properties', {}).get('topics', [])
+                    if any(t in ['sanction', 'sanction.counter'] for t in topics):
+                        sanctioned_ids.add(entity['id'])
 
-    # Identify sanctioned individuals
-    sanctioned_ids = set()
-    for entity in data:
-        if entity.get('schema') == 'Person':
-            topics = entity.get('properties', {}).get('topics', [])
-            if any(t in ['sanction', 'sanction.counter'] for t in topics):
-                sanctioned_ids.add(entity['id'])
+            # Extract gender information
+            gender_map = defaultdict(set)
+            for entity in data:
+                if entity['id'] in sanctioned_ids and 'gender' in entity.get('properties', {}):
+                    genders = entity['properties']['gender']
+                    if isinstance(genders, list):
+                        for gender in genders:
+                            gender_map[entity['id']].add(gender.lower().strip())
+                    else:
+                        gender_map[entity['id']].add(genders.lower().strip())
 
-    # Extract gender information
-    gender_map = defaultdict(set)
-    for entity in data:
-        if entity['id'] in sanctioned_ids and 'gender' in entity.get('properties', {}):
-            genders = entity['properties']['gender']
-            if isinstance(genders, list):
-                for gender in genders:
-                    gender_map[entity['id']].add(gender.lower().strip())
-            else:
-                gender_map[entity['id']].add(genders.lower().strip())
+            # Categorize individuals
+            for canonical_id, genders in gender_map.items():
+                if len(genders) > 1:
+                    gender_categories['mixed'] += 1
+                else:
+                    gender = next(iter(genders))
+                    gender_categories[gender] += 1
 
-    # Categorize individuals
-    gender_categories = defaultdict(int)
-    for canonical_id, genders in gender_map.items():
-        if len(genders) > 1:
-            gender_categories['mixed'] += 1
-        else:
-            gender = next(iter(genders))
-            gender_categories[gender] += 1
+            # Append results for this year
+            year = exact_date[:4]
+            results.append({
+                'Year': year,
+                'Male': gender_categories.get('male', 0),
+                'Female': gender_categories.get('female', 0),
+                'Mixed': gender_categories.get('mixed', 0)
+            })
 
-    return dict(gender_categories)
+        except json.JSONDecodeError as e:
+            print(f"Error decoding JSON in file {json_path}: {e}")
+            continue
 
+    if not results:
+        print("No valid data found.")
+        return
 
+    # Convert results to DataFrame
+    df = pd.DataFrame(results)
 
+    # Sort DataFrame by year for better visualization
+    df = df.sort_values(by='Year')
 
+    # Set the year as the index
+    df.set_index('Year', inplace=True)
 
+    # Calculate relative frequency for each gender category
+    for gender in ['Male', 'Female', 'Mixed']:
+        df[f'{gender}_rel_freq(%)'] = round(
+            (df[gender] / df.index.map(total_sanctioned_by_gender)) * 100, 2
+        )
+
+    # Create a frequency table with both absolute and relative frequencies
+    frequency_table = pd.DataFrame()
+    for gender in ['Male', 'Female', 'Mixed']:
+        frequency_table[f'{gender}'] = df[gender]
+        frequency_table[f'{gender}_rel_freq(%)'] = df[f'{gender}_rel_freq(%)']
+
+    # Create bar plot
+    ax = df[['Male', 'Female']].plot(kind='bar', figsize=(12, 6), color=['darkred', 'lightgreen', 'orange'], width=0.8)
+    plt.xlabel('Year')
+    plt.ylabel('Number of Individuals')
+    plt.title('Gender Distribution Among Sanctioned Individuals per Year')
+    plt.xticks(rotation=45)
+    plt.grid(axis='y', linestyle='--', alpha=0.7)
+    plt.legend(title='Gender')
+    plt.tight_layout()
+    plt.show()
+
+# Display the frequency table
+    display(frequency_table)
 
 
 

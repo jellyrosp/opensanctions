@@ -499,20 +499,20 @@ def csv_gender_source_frequency():
 
     # Frequency table based on unique canonical_ids
     frequency_data = {
-        'dataset_category': ['valid_dataset', 'non_valid_dataset'],
-        'count': [len(valid_canonical_ids_list), len(non_valid_canonical_ids_list)]
+        'Dataset Category': ['valid_dataset', 'non_valid_dataset'],
+        'Frequency': [len(valid_canonical_ids_list), len(non_valid_canonical_ids_list)]
     }
     frequency_table = pd.DataFrame(frequency_data)
 
     # Calculate relative frequency and round to 2 decimal places
-    frequency_table['relative_frequency(%)'] = round((frequency_table['count'] / 11485) * 100, 2)
+    frequency_table['Relative Frequency(%)'] = round((frequency_table['Frequency'] / 11485) * 100, 2)
 
     # Bar plot
     plt.figure(figsize=(8, 6))
-    plt.bar(frequency_table['dataset_category'], frequency_table['count'], color=['green', 'red'])
-    plt.title('Frequency of Valid and Non-Valid Datasets')
+    plt.bar(frequency_table['Dataset Category'], frequency_table['Frequency'], color=['green', 'red'])
+    plt.title('Distribution of Valid and Non-Valid Datasets')
     plt.xlabel('Dataset Category')
-    plt.ylabel('Count')
+    plt.ylabel('Frequency')
     plt.show()
 
     display(frequency_table.set_index(frequency_table.columns[0]))   
@@ -554,88 +554,6 @@ def csv_total_sanction_individual():
 
 
 
-def count_gender_categories_for_sanctioned_individuals():
-    """
-    Count the total number of sanctioned individuals per gender category.
-    Individuals with multiple gender values are categorized as 'mixed'.
-    Also plots a bar chart and displays a frequency table.
-
-    Parameters
-    ----------
-    csv_path : str
-        The file path to the CSV dataset.
-    total_individuals : int
-        Total number of sanctioned individuals for percentage calculation.
-
-    Returns
-    -------
-    pd.DataFrame
-        A frequency table with gender categories, counts, and percentages.
-    """
-    # Read the CSV file
-    df = pd.read_csv(statement_subset_csv_path, dtype={
-        'canonical_id': str,
-        'prop': str,
-        'value': str,
-        'schema': str
-    })
-
-    # Filter for sanctioned individuals
-    sanctioned_df = df[
-        (df['prop'] == 'topics') &
-        (df['value'].isin(['sanction', 'sanction.counter']))
-    ]
-    sanctioned_ids = set(sanctioned_df['canonical_id'].dropna().unique())
-
-    # Filter for gender information of sanctioned individuals
-    gender_df = df[
-        (df['prop'] == 'gender') &
-        (df['value'].isin(['male', 'female', 'other'])) &
-        (df['canonical_id'].isin(sanctioned_ids))
-    ]
-
-    # Map canonical_id to set of gender values
-    gender_map = defaultdict(set)
-    for _, row in gender_df.iterrows():
-        canonical_id = row['canonical_id']
-        gender = row['value'].lower().strip()
-        gender_map[canonical_id].add(gender)
-
-    # Categorize individuals
-    gender_categories = defaultdict(int)
-    for canonical_id, genders in gender_map.items():
-        if len(genders) > 1:
-            gender_categories['mixed'] += 1
-        else:
-            gender = next(iter(genders))
-            gender_categories[gender] += 1
-
-    # Create a DataFrame for the frequency table
-    frequency_table = pd.DataFrame({
-        'gender_category': list(gender_categories.keys()),
-        'count': list(gender_categories.values())
-    })
-
-    # Calculate relative frequency and round to 2 decimal places
-    frequency_table['relative_frequency(%)'] = round(
-        (frequency_table['count'] / 12046) * 100, 2
-    )
-
-    # Bar plot
-    plt.figure(figsize=(8, 6))
-    plt.bar(frequency_table['gender_category'], frequency_table['count'],
-            color=['blue', 'pink', 'green', 'orange'])
-    plt.title('Gender Distribution Among Sanctioned Individuals')
-    plt.xlabel('Gender Category')
-    plt.ylabel('Count')
-    plt.xticks(rotation=45)
-    plt.show()
-
-    # Display the frequency table
-    display(frequency_table.set_index('gender_category'))
-
-
-
 
 def csv_dataset_frequency_for_sanctioned_gender():
     # Connect to the SQLite database
@@ -663,29 +581,127 @@ def csv_dataset_frequency_for_sanctioned_gender():
     conn.close()
 
     # Convert results to a pandas DataFrame
-    frequency_table = pd.DataFrame(results, columns=['dataset_category', 'count'])
+    frequency_table = pd.DataFrame(results, columns=['Dataset Category', 'Frequency'])
 
     # Calculate relative frequency and round to 2 decimal places
-    frequency_table['relative_frequency(%)'] = round((frequency_table['count'] / 45241) * 100, 2)
+    frequency_table['Relative Frequency(%)'] = round((frequency_table['Frequency'] / 45241) * 100, 2)
 
     # Bar plot
     plt.figure(figsize=(12, 6))
-    plt.bar(frequency_table['dataset_category'], frequency_table['count'], color='skyblue')
-    plt.title('Frequency of Individual Valid Datasets (Gender)')
+    plt.bar(frequency_table['Dataset Category'], frequency_table['Frequency'], color='skyblue')
+    plt.title('Distribution of Individual Valid Datasets Providing Gender Information')
     plt.xlabel('Dataset Category')
-    plt.ylabel('Count')
+    plt.ylabel('Frequency')
     plt.xticks(rotation=90)
     plt.tight_layout()
     plt.show()
 
     # Display frequency table
-    display(frequency_table.set_index('dataset_category'))
+    display(frequency_table.set_index('Dataset Category'))
 
 
 
 
 
+def count_gender_categories_for_sanctioned_individuals():
+    """
+    Count the frequency of each gender category for individuals with 'sanction' in 'topics'.
+    Individuals with both 'male' and 'female' are categorized as 'mixed'.
 
+    Parameters
+    ----------
+    db_path : str
+        The file path to the SQLite database.
+    total_individuals : int
+        Total number of sanctioned individuals for percentage calculation.
 
+    Returns
+    -------
+    pd.DataFrame
+        A DataFrame with gender categories, frequencies, and relative frequencies.
+    """
+    # Connect to the SQLite database
+    conn = sqlite3.connect(persons_sub_db_path)
+    cursor = conn.cursor()
 
+    # SQL query to count gender frequency for sanctioned individuals
+    sql_query = """
+    WITH
+    -- Individuals with 'sanction' in 'topics'
+    has_sanction AS (
+        SELECT DISTINCT canonical_id
+        FROM persons
+        WHERE prop = 'topics' AND value = 'sanction'
+    ),
 
+    -- Individuals with 'gender' property
+    gender_values AS (
+        SELECT
+            canonical_id,
+            value AS gender
+        FROM persons
+        WHERE prop = 'gender' AND value IN ('male', 'female')
+    ),
+
+    -- Count distinct genders per individual
+    gender_counts AS (
+        SELECT
+            canonical_id,
+            COUNT(DISTINCT gender) AS gender_count
+        FROM gender_values
+        GROUP BY canonical_id
+    ),
+
+    -- Categorize individuals
+    categorized_genders AS (
+        SELECT
+            gv.canonical_id,
+            CASE
+                WHEN gc.gender_count > 1 THEN 'mixed'
+                ELSE gv.gender
+            END AS gender_category
+        FROM gender_values gv
+        JOIN gender_counts gc ON gv.canonical_id = gc.canonical_id
+    )
+
+    -- Count frequency of each gender category for individuals with 'sanction' in 'topics'
+    SELECT
+        cg.gender_category,
+        COUNT(DISTINCT cg.canonical_id) AS frequency
+    FROM
+        categorized_genders cg
+    INNER JOIN
+        has_sanction hs ON cg.canonical_id = hs.canonical_id
+    GROUP BY
+        cg.gender_category
+    ORDER BY
+        frequency DESC;
+    """
+
+    # Execute the query
+    cursor.execute(sql_query)
+    results = cursor.fetchall()
+
+    # Close the connection
+    conn.close()
+
+    # Create a DataFrame for the results
+    frequency_df = pd.DataFrame(results, columns=['Gender', 'Frequency'])
+
+    # Calculate relative frequency
+    frequency_df['Relative Frequency (%)'] = (frequency_df['Frequency'] / 12046) * 100
+    frequency_df['Relative Frequency (%)'] = frequency_df['Relative Frequency (%)'].round(2)
+
+    # Bar plot
+    plt.figure(figsize=(8, 6))
+    plt.bar(frequency_df['Gender'], frequency_df['Frequency'], color=['darkred', 'lightgreen', 'orange'])
+    plt.title('Gender Distribution Among Sanctioned Individuals')
+    plt.xlabel('Gender Category')
+    plt.ylabel('Frequency')
+    plt.xticks(rotation=45)
+    plt.show()
+
+    # Display the table in Jupyter
+    display(frequency_df.set_index('Gender'))
+
+#count_gender_categories_for_sanctioned_individuals()
