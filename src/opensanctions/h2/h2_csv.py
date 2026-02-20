@@ -52,7 +52,7 @@ def csv_categorical_frequency_for_sanctioned_gender(category='nationality', mapp
     conn.close()
 
     # Convert results to a DataFrame
-    df = pd.DataFrame(results, columns=['gender', category, 'count'])
+    df = pd.DataFrame(results, columns=['Gender', category, 'count'])
 
     # Map category codes to full names if a mapping dictionary is provided
     if mapping_dict is not None:
@@ -63,10 +63,10 @@ def csv_categorical_frequency_for_sanctioned_gender(category='nationality', mapp
         df[category_name_col] = df[category]
 
     # Group by gender and category_name, summing the counts to avoid duplicates
-    df_grouped = df.groupby(['gender', category_name_col], as_index=False).sum()
+    df_grouped = df.groupby(['Gender', category_name_col], as_index=False).sum()
 
     # Pivot the grouped DataFrame to create a contingency table
-    contingency_table = df_grouped.pivot(index='gender', columns=category_name_col, values='count').fillna(0)
+    contingency_table = df_grouped.pivot(index='Gender', columns=category_name_col, values='count').fillna(0)
 
     # Transpose the contingency table to reverse the axis order
     transposed_contingency_table = contingency_table.T
@@ -87,10 +87,10 @@ def csv_categorical_frequency_for_sanctioned_gender(category='nationality', mapp
         filtered_df.loc[:, category_name_col] = filtered_df[category].map(mapping_dict)
 
     # Group by gender and category_name for filtered data
-    filtered_df_grouped = filtered_df.groupby(['gender', category_name_col], as_index=False).sum()
+    filtered_df_grouped = filtered_df.groupby(['Gender', category_name_col], as_index=False).sum()
 
     # Pivot the filtered DataFrame to create a contingency table for the plot
-    filtered_contingency_table = filtered_df_grouped.pivot(index='gender', columns=category_name_col, values='count').fillna(0)
+    filtered_contingency_table = filtered_df_grouped.pivot(index='Gender', columns=category_name_col, values='count').fillna(0)
 
     # Transpose the filtered contingency table to swap axes
     transposed_table = filtered_contingency_table.T
@@ -99,7 +99,6 @@ def csv_categorical_frequency_for_sanctioned_gender(category='nationality', mapp
     normalized_table = transposed_table.div(transposed_table.sum(axis=1), axis=0) * 100
 
     # Create a diverging stacked bar chart with relative frequencies
-    plt.figure(figsize=(12, 6))
     ax = normalized_table.plot(kind='bar', stacked=True, color=['lightgreen', 'darkred'], figsize=(12, 6))
 
     # Customize the plot
