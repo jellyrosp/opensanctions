@@ -130,6 +130,11 @@ def json_categorical_frequency_for_sanctioned_gender_by_year(category='nationali
                 # Normalize the transposed table to get relative frequencies (percentages)
                 normalized_table = transposed_table.div(transposed_table.sum(axis=1), axis=0) * 100
 
+            
+                # Store results for this year
+                results[year] = relative_frequency_table
+
+
                 # Create a diverging stacked bar chart with relative frequencies
                 ax = normalized_table.plot(kind='bar', stacked=True, color=['lightgreen', 'darkred'])
 
@@ -142,9 +147,6 @@ def json_categorical_frequency_for_sanctioned_gender_by_year(category='nationali
 
                 # Show the plot
                 plt.show()
-
-                # Store results for this year
-                results[year] = relative_frequency_table
 
         except Exception as e:
             print(f"Error processing {json_path}: {e}")
@@ -167,12 +169,16 @@ def classify_reason(reason: str, taxonomy: dict) -> list:
     )
     definitions = {key: value["definition"] for key, value in taxonomy.items()}
 
-# #     prompt = f"""
-#     You are a sanctions classification assistant.
-#     Your task is to classify the following sanctions reason into the given categories.
+    # Build the prompt with definitions
+    prompt = f"""
+    You are a sanctions classification assistant.
+    Classify the following sanctions reason into these categories:
 
-    Categories and Definitions:
-    {json.dumps({k: {"label": v["label"], "definition": v["definition"]} for k, v in taxonomy.items()}, indent=2)}
+    Categories:
+    {categories_with_labels}
+
+    Definitions:
+    {json.dumps(definitions, indent=2)}
 
 #     Reason: '{reason}'
 
@@ -181,26 +187,26 @@ def classify_reason(reason: str, taxonomy: dict) -> list:
     - If the reason does not fit any category, return 'Unclear'.
     - If the reason fits multiple categories, include all relevant keys.
     """
-    # Call Ollama
-    try:
-        response = ollama.generate(model="llama2", prompt=prompt)
-        return [cat.strip() for cat in response["response"].split(",")]
-    except Exception as e:
-        print(f"Error classifying reason: {reason}. Error: {e}")
-        return ["Unclear"]
+#     # Call Ollama
+#     try:
+#         response = ollama.generate(model="llama2", prompt=prompt)
+#         return [cat.strip() for cat in response["response"].split(",")]
+#     except Exception as e:
+#         print(f"Error classifying reason: {reason}. Error: {e}")
+#         return ["Unclear"]
 
-# Process data
-results = []
-for entry in data:  # <-- Now "data" is defined
-    for reason in entry["sanctions_reasons"][0]:
-        categories = classify_reason(reason, sanctions_taxonomy)
-        results.append({
-            "id": entry["id"],
-            "gender": entry["gender"][0],
-            "reason": reason,
-            "categories": categories
-        })
+# # Process data
+# results = []
+# for entry in data:  # <-- Now "data" is defined
+#     for reason in entry["sanctions_reasons"][0]:
+#         categories = classify_reason(reason, sanctions_taxonomy)
+#         results.append({
+#             "id": entry["id"],
+#             "gender": entry["gender"][0],
+#             "reason": reason,
+#             "categories": categories
+#         })
 
-# Save results for analysis
-with open("classified_results.json", "w") as f:
-    json.dump(results, f, indent=2)
+# # Save results for analysis
+# with open("classified_results.json", "w") as f:
+#     json.dump(results, f, indent=2)

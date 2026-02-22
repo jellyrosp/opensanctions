@@ -507,7 +507,14 @@ def csv_gender_source_frequency():
     # Calculate relative frequency and round to 2 decimal places
     frequency_table['Relative Frequency(%)'] = round((frequency_table['Frequency'] / 11485) * 100, 2)
 
+    # Print the title
+    print("\033[1mTable 2.\033[0m Distribution of valid and non-valid datasets.")   
+
+    display(frequency_table.set_index(frequency_table.columns[0]))
+
     # Bar plot
+    print("\033[1mFigure 2\033[0m")
+
     plt.figure(figsize=(8, 6))
     plt.bar(frequency_table['Dataset Category'], frequency_table['Frequency'], color=['green', 'red'])
     plt.title('Distribution of Valid and Non-Valid Datasets')
@@ -515,7 +522,7 @@ def csv_gender_source_frequency():
     plt.ylabel('Frequency')
     plt.show()
 
-    display(frequency_table.set_index(frequency_table.columns[0]))   
+       
 
 
 
@@ -586,7 +593,15 @@ def csv_dataset_frequency_for_sanctioned_gender():
     # Calculate relative frequency and round to 2 decimal places
     frequency_table['Relative Frequency(%)'] = round((frequency_table['Frequency'] / 45241) * 100, 2)
 
+    # Print the title
+    print("\033[1mTable 3.\033[0m Gender distribution among sanctioned individuals.")
+
+    # Display frequency table
+    display(frequency_table.set_index('Dataset Category'))
+
     # Bar plot
+    print("\033[1mFigure 3\033[0m")
+    
     plt.figure(figsize=(12, 6))
     plt.bar(frequency_table['Dataset Category'], frequency_table['Frequency'], color='skyblue')
     plt.title('Distribution of Individual Valid Datasets Providing Gender Information')
@@ -595,10 +610,6 @@ def csv_dataset_frequency_for_sanctioned_gender():
     plt.xticks(rotation=90)
     plt.tight_layout()
     plt.show()
-
-    # Display frequency table
-    display(frequency_table.set_index('Dataset Category'))
-
 
 
 
@@ -631,51 +642,34 @@ def count_gender_categories_for_sanctioned_individuals():
     has_sanction AS (
         SELECT DISTINCT canonical_id
         FROM persons
-        WHERE prop = 'topics' AND value = 'sanction'
+        WHERE prop = 'topics'
+          AND (value = 'sanction' OR value = 'sanction.counter')
     ),
 
-    -- Individuals with 'gender' property
-    gender_values AS (
-        SELECT
+    -- First gender row per individual (ordered by rowid)
+    first_gender AS (
+        SELECT 
             canonical_id,
             value AS gender
-        FROM persons
-        WHERE prop = 'gender' AND value IN ('male', 'female')
-    ),
-
-    -- Count distinct genders per individual
-    gender_counts AS (
-        SELECT
-            canonical_id,
-            COUNT(DISTINCT gender) AS gender_count
-        FROM gender_values
-        GROUP BY canonical_id
-    ),
-
-    -- Categorize individuals
-    categorized_genders AS (
-        SELECT
-            gv.canonical_id,
-            CASE
-                WHEN gc.gender_count > 1 THEN 'mixed'
-                ELSE gv.gender
-            END AS gender_category
-        FROM gender_values gv
-        JOIN gender_counts gc ON gv.canonical_id = gc.canonical_id
+        FROM (
+            SELECT 
+                canonical_id,
+                value,
+                ROW_NUMBER() OVER (PARTITION BY canonical_id ORDER BY rowid) AS rn
+            FROM persons
+            WHERE prop = 'gender' AND value IN ('male', 'female')
+        ) ranked
+        WHERE rn = 1
     )
 
-    -- Count frequency of each gender category for individuals with 'sanction' in 'topics'
+    -- Count frequency of each FIRST gender for sanctioned individuals
     SELECT
-        cg.gender_category,
-        COUNT(DISTINCT cg.canonical_id) AS frequency
-    FROM
-        categorized_genders cg
-    INNER JOIN
-        has_sanction hs ON cg.canonical_id = hs.canonical_id
-    GROUP BY
-        cg.gender_category
-    ORDER BY
-        frequency DESC;
+        fg.gender AS gender_category,
+        COUNT(DISTINCT fg.canonical_id) AS frequency
+    FROM first_gender fg
+    INNER JOIN has_sanction hs ON fg.canonical_id = hs.canonical_id
+    GROUP BY fg.gender
+    ORDER BY frequency DESC;
     """
 
     # Execute the query
@@ -692,7 +686,15 @@ def count_gender_categories_for_sanctioned_individuals():
     frequency_df['Relative Frequency (%)'] = (frequency_df['Frequency'] / 12046) * 100
     frequency_df['Relative Frequency (%)'] = frequency_df['Relative Frequency (%)'].round(2)
 
-    # Bar plot
+    # Print the title
+    print("\033[1mTable 1.\033[0m Gender distribution among sanctioned individuals.")
+    
+    # Display the table in Jupyter
+    display(frequency_df.set_index('Gender'))
+
+   # Bar plot
+    print("\033[1mFigure 1\033[0m")
+
     plt.figure(figsize=(8, 6))
     plt.bar(frequency_df['Gender'], frequency_df['Frequency'], color=['darkred', 'lightgreen', 'orange'])
     plt.title('Gender Distribution Among Sanctioned Individuals')
@@ -701,7 +703,5 @@ def count_gender_categories_for_sanctioned_individuals():
     plt.xticks(rotation=45)
     plt.show()
 
-    # Display the table in Jupyter
-    display(frequency_df.set_index('Gender'))
 
-#count_gender_categories_for_sanctioned_individuals()
+    
