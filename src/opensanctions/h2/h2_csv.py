@@ -458,22 +458,20 @@ def csv_sanctioned_gender_topics_frequency(mapping_dict=None, min_count=0):
 
 
 
-
-def csv_sanctioned_gender_specific_topics_frequency(gender, min_count=0):
+    
+def csv_sanctioned_gender_specific_topics_frequency(min_count=0):
     """
-    Generate a relative frequency table and bar plot for a specific gender vs. topics for sanctioned individuals.
+    Generate a unified relative frequency table and bar plot for all genders vs. topics for sanctioned individuals.
 
     Parameters:
-    - gender: str (specific gender to focus on, e.g., 'female' or 'male')
     - min_count: int (minimum count to include a topic in the plot and table)
     """
-
     # Connect to the SQLite database
     conn = sqlite3.connect(persons_sub_db_path)
     cursor = conn.cursor()
 
-    # SQL query to get the frequency table for the specified gender
-    query = f"""
+    # SQL query to get the frequency table for all genders
+    query = """
         WITH
         -- Individuals with at least one 'sanction' or 'sanction.counter' in topics
         sanctioned_individuals AS (
@@ -514,42 +512,43 @@ def csv_sanctioned_gender_specific_topics_frequency(gender, min_count=0):
             WHERE p.prop = 'topics'
         ),
 
-        -- Contingency table: gender × topics for a specific gender
-        specific_gender_topics AS (
+        -- Contingency table: gender × topics
+        gender_topics AS (
             SELECT
+                g.gender,
                 t.topics,
                 COUNT(DISTINCT g.canonical_id) AS count
             FROM
                 gender_data g
             JOIN
                 topics_data t ON g.canonical_id = t.canonical_id
-            WHERE
-                g.gender = '{gender}'
             GROUP BY
-                t.topics
+                g.gender, t.topics
         ),
 
-        -- Total count of individuals for the specific gender
-        total_count AS (
+        -- Total count of individuals for each gender
+        total_counts AS (
             SELECT
+                gender,
                 COUNT(DISTINCT canonical_id) AS total
             FROM
                 gender_data
-            WHERE
-                gender = '{gender}'
+            GROUP BY
+                gender
         )
 
-        -- Frequency table with relative frequency for the specific gender
+        -- Frequency table with relative frequency for all genders
         SELECT
-            s.topics,
-            s.count,
-            ROUND((s.count * 100.0 / t.total), 2) AS relative_frequency
+            gt.gender,
+            gt.topics,
+            gt.count,
+            ROUND((gt.count * 100.0 / tc.total), 2) AS relative_frequency
         FROM
-            specific_gender_topics s
-        CROSS JOIN
-            total_count t
+            gender_topics gt
+        JOIN
+            total_counts tc ON gt.gender = tc.gender
         ORDER BY
-            s.count DESC;
+            gt.gender, gt.count DESC;
     """
 
     # Execute the query
@@ -558,38 +557,57 @@ def csv_sanctioned_gender_specific_topics_frequency(gender, min_count=0):
     conn.close()
 
     # Convert results to a DataFrame
-    df = pd.DataFrame(results, columns=['Topics', 'Frequency', 'Relative Frequency'])
+    df = pd.DataFrame(results, columns=['Gender', 'Topics', 'Frequency', 'Relative Frequency'])
 
     # Filter topics with count >= min_count
     if min_count > 0:
         df = df[df['Frequency'] >= min_count]
 
-    # Create a bar plot with relative frequencies
-    plt.figure(figsize=(12, 6))
-    ax = plt.bar(df['Topics'], df['Relative Frequency'], color='darkred')
+    # Pivot the DataFrame for frequencies
+    pivot_freq = df.pivot(index='Topics', columns='Gender', values='Frequency').reset_index()
+    # Pivot the DataFrame for relative frequencies
+    pivot_rel_freq = df.pivot(index='Topics', columns='Gender', values='Relative Frequency').reset_index()
 
-    # Customize the plot
-    plt.title(f'Relative Frequency of Topics for Gender {gender.capitalize()} (Count >= {min_count})')
+    # Merge the two pivoted DataFrames
+    pivot_df = pd.merge(pivot_freq, pivot_rel_freq, on='Topics', suffixes=('_freq', '_rel_freq'))
+
+    # Rename columns for clarity
+    pivot_df.columns = [
+        'Topics',
+        'female_freq', 'male_freq',
+        'female_rel_freq', 'male_rel_freq'
+    ]
+
+    # Fill NaN values with 0 before converting to integers
+    pivot_df['female_freq'] = pivot_df['female_freq'].fillna(0).astype(int)
+    pivot_df['male_freq'] = pivot_df['male_freq'].fillna(0).astype(int)
+
+    # Create a grouped bar plot for relative frequencies
+    plt.figure(figsize=(14, 8))
+    ax = pivot_df.plot(
+        x='Topics',
+        y=['female_rel_freq', 'male_rel_freq'],
+        kind='bar',
+        stacked=False,
+        ax=plt.gca(),
+        colormap='viridis'
+    )
+    plt.title(f'Relative Frequency of Topics by Gender (Count >= {min_count})')
     plt.xlabel('Topics')
     plt.ylabel('Relative Frequency (%)')
     plt.xticks(rotation=45, ha='right')
+    plt.legend(title='Gender')
     plt.tight_layout()
-
-    # Show the plot
     plt.show()
 
-    # Set pandas display options to show all rows and columns
+    # Set pandas display options
     pd.set_option('display.max_rows', None)
     pd.set_option('display.max_columns', None)
     pd.set_option('display.width', None)
     pd.set_option('display.max_colwidth', None)
 
-    # Return the frequency table
-    return df
-
-
-
-
+    display(pivot_df.set_index('Topics'))
+    
 
 
 

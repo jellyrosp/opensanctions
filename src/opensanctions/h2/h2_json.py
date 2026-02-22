@@ -158,9 +158,9 @@ def json_categorical_frequency_for_sanctioned_gender_by_year(category='nationali
 
 
 
-# Load your JSON data from file
-with open(sub_targets_nested_reasons_path, "r") as f:
-    data = json.load(f)  # <-- This line defines "data"
+# #Load your JSON data from file
+# with open(sub_targets_nested_reasons_path, "r") as f:
+#     data = json.load(f)  # <-- This line defines "data"
 
 def classify_reason(reason: str, taxonomy: dict) -> list:
     # Extract labels and definitions for the prompt
@@ -210,3 +210,149 @@ def classify_reason(reason: str, taxonomy: dict) -> list:
 # # Save results for analysis
 # with open("classified_results.json", "w") as f:
 #     json.dump(results, f, indent=2)
+
+
+
+
+
+
+
+def gender_distribution_over_topics_by_year_json():
+    """
+    For each year:
+    - Select Persons
+    - Require gender
+    - Require topics contain 'sanction' or 'sanction.counter'
+    - Require at least one additional topic
+    - Compute gender distribution over the additional topics only
+
+    Output:
+        - Combined frequency table (absolute + relative frequencies)
+        - Barplot per year
+    """
+
+    yearly_frames = []
+
+    for json_path_str, exact_date in input_map_person.items():
+        json_path = PROJECT_ROOT / json_path_str
+        year = exact_date[:4]
+
+        topic_gender_counts = defaultdict(lambda: defaultdict(int))
+
+        try:
+            with json_path.open("r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            for entity in data:
+
+                if entity.get("schema") != "Person":
+                    continue
+
+                properties = entity.get("properties", {})
+
+                if "gender" not in properties:
+                    continue
+
+                topics = properties.get("topics", [])
+                genders = properties.get("gender", [])
+
+                if not isinstance(topics, list):
+                    topics = [topics]
+
+                if not isinstance(genders, list):
+                    genders = [genders]
+
+                # Must contain sanction or sanction.counter
+                if not any(t in ["sanction", "sanction.counter"] for t in topics):
+                    continue
+
+                # Extract non-sanction topics
+                other_topics = [
+                    t for t in topics
+                    if t not in ["sanction", "sanction.counter"]
+                ]
+
+                # Require at least one additional topic
+                if len(other_topics) == 0:
+                    continue
+
+                # Normalize gender
+                normalized = {
+                    g.lower().strip()
+                    for g in genders
+                    if isinstance(g, str)
+                }
+
+                if len(normalized) == 0:
+                    continue
+                elif len(normalized) > 1:
+                    gender_label = "mixed"
+                else:
+                    gender_label = next(iter(normalized))
+
+                # Count gender over additional topics
+                for topic in other_topics:
+                    topic_gender_counts[topic][gender_label] += 1
+
+        except json.JSONDecodeError as e:
+            print(f"Error decoding JSON in file {json_path}: {e}")
+            continue
+
+        if topic_gender_counts:
+            df_year = pd.DataFrame(topic_gender_counts).T.fillna(0)
+
+            for col in ["male", "female", "mixed"]:
+                if col not in df_year.columns:
+                    df_year[col] = 0
+
+            df_year = df_year[["male", "female", "mixed"]]
+
+            df_year["Year"] = year
+            df_year["Topic"] = df_year.index
+
+            yearly_frames.append(df_year.reset_index(drop=True))
+
+    if not yearly_frames:
+        print("No valid data found.")
+        return
+
+    df_all = pd.concat(yearly_frames, ignore_index=True)
+
+    # Sort within each year by total frequency
+    df_all["total"] = df_all[["male", "female", "mixed"]].sum(axis=1)
+    df_all = df_all.sort_values(["Year", "total"], ascending=[True, False])
+    df_all = df_all.drop(columns="total")
+
+    # Relative frequencies per (Year, Topic)
+    row_totals = df_all[["male", "female", "mixed"]].sum(axis=1)
+
+    for col in ["male", "female", "mixed"]:
+        df_all[f"{col}_rel_freq(%)"] = (
+            (df_all[col] / row_totals) * 100
+        ).round(2)
+
+    # ----- PLOTS -----
+    for year in df_all["Year"].unique():
+
+        df_plot = df_all[df_all["Year"] == year].set_index("Topic")
+
+        ax = df_plot[["male", "female", "mixed"]].plot(
+            kind="bar",
+            figsize=(12, 6),
+            width=0.8
+        )
+
+        plt.xlabel("Topic")
+        plt.ylabel("Number of Individuals")
+        plt.title(f"Gender Distribution Over Additional Topics ({year})")
+        plt.xticks(rotation=45)
+        plt.grid(axis="y", linestyle="--", alpha=0.7)
+        plt.legend(title="Gender")
+        plt.tight_layout()
+        plt.show()
+
+    return df_all
+
+
+# Run
+gender_distribution_over_topics_by_year_json()
