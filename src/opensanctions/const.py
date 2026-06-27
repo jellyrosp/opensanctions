@@ -17,6 +17,9 @@ persons_sub_db_path = PERSONS_SUB_DB_PATH
 SUB_TARGETS_NESTED_REASONS = os.path.join(PROJECT_ROOT, "datasets", "2026", "sub_targets.nested.reasons.json")
 sub_targets_nested_reasons_path = SUB_TARGETS_NESTED_REASONS
 
+CLASSIFICATION_CSV_PATH = os.path.join(PROJECT_ROOT, "datasets", "2026", "classification.csv")
+classification_csv_path = CLASSIFICATION_CSV_PATH
+
 input_map_raw = {
     "datasets/2021/sanctions-20211231-entities.ftm.json": "20211231",
     "datasets/2022/sanctions-20221231-entities.ftm.json": "20221231",
@@ -309,6 +312,27 @@ sanctions_taxonomy = {
             "regardless of any direct involvement in sanctionable conduct."
         )
     }
+}
+
+
+
+topic_mapping = {
+    'corp.disqual': 'disqualified',
+    'crime': 'crime',
+    'crime.terror': 'terrorism',
+    'crime.war': 'war crimes',
+    'debarment': 'debarred entity',
+    'export.control': 'export controlled',
+    'mil': 'military',
+    'poi': 'person of interest',
+    'role.diplo': 'diplomat',
+    'role.judge': 'judge',
+    'role.oligarch': 'oligarch',
+    'role.pep': 'pol. exp. person',
+    'role.rca': 'close associate',
+    'sanction': 'sanctioned entity',
+    'sanction.counter': 'counter-sanctioned entity',
+    'wanted': 'wanted'
 }
 
 

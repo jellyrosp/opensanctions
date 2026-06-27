@@ -5,7 +5,7 @@ from scipy.stats import fisher_exact
 from statsmodels.stats.multitest import multipletests
 import statsmodels.api as sm
 from scipy.stats import chi2_contingency
-from opensanctions.const import persons_sub_db_path
+from opensanctions.const import persons_sub_db_path, topic_mapping
 
 
 
@@ -74,15 +74,23 @@ def get_gender_topic_contingency_table():
     results = cursor.fetchall()
     conn.close()
 
-    df = pd.DataFrame(results, columns=["Topics", "Gender", "Count"])
+
+    df = pd.DataFrame(results, columns=["Risk labels", "Gender", "Count"])
+
+    # Remove unwanted labels
+    df = df[~df["Risk labels"].isin(["asset.frozen", "reg.action"])]
+
+    # Human-readable labels
+    df["Risk labels"] = df["Risk labels"].replace(topic_mapping)
 
     # Pivot → contingency table
     contingency = (
-        df.pivot(index="Topics", columns="Gender", values="Count")
+        df.pivot(index="Risk labels", columns="Gender", values="Count")
         .fillna(0)
         .astype(int)
         .reset_index()
     )
+
 
     # Ensure consistent column naming
     contingency = contingency.rename(
@@ -92,8 +100,9 @@ def get_gender_topic_contingency_table():
         }
     )
 
-    #return contingency
     return contingency
+
+#print(get_gender_topic_contingency_table())
 
 
 def gender_topic_inference(contingency_table):
@@ -118,7 +127,7 @@ def gender_topic_inference(contingency_table):
     from scipy.stats import chi2_contingency, fisher_exact
     from statsmodels.stats.multitest import multipletests
 
-    ct = contingency_table.set_index("Topics")
+    ct = contingency_table.set_index("Risk labels")
     matrix = ct[["female_count", "male_count"]]
 
     chi2, p, dof, expected = chi2_contingency(matrix)
@@ -144,7 +153,7 @@ def gender_topic_inference(contingency_table):
         ci_low, ci_high = sm_table.oddsratio_confint()
 
         results.append({
-            "topic": topic,
+            "risk labels": topic,
             "female_count": a,
             "male_count": c,
             "odds_ratio": oddsratio,
