@@ -6,6 +6,8 @@ import statsmodels.api as sm
 from opensanctions.const import classification_csv_path
 from tabulate import tabulate
 
+from opensanctions.const import classification_csv_path
+
 
 
 def load_and_prepare_data(csv_path):
@@ -31,6 +33,19 @@ def load_and_prepare_data(csv_path):
 
     return df
 
+
+def get_filtered_df(df):
+    """
+    Returns Gender × Type contingency table for individuals with at least one 'x' in columns 'C','D', E, F, G.
+    """
+    # Filter rows where at least one of D, E, F, G, H is 1
+    df_filtered = df[df[['C', 'D', 'E', 'F', 'G']].sum(axis=1) > 0]
+
+    return df_filtered
+
+
+
+
 def get_gender_type_contingency_table(df):
     """
     Returns Gender × Type contingency table for individuals with at least one 'x' in columns 'C','D', E, F, G.
@@ -45,6 +60,18 @@ def get_gender_type_contingency_table(df):
     """
     # Filter rows where at least one of D, E, F, G, H is 1
     df_filtered = df[df[['C', 'D', 'E', 'F', 'G']].sum(axis=1) > 0]
+
+
+
+
+    # male_count = df_filtered["B"].str.contains(r"(?<!fe)male", regex=True).sum()
+    # female_count = df_filtered["B"].str.contains("female").sum()
+    
+    
+    # print(f'male_count: {male_count} , female_count: {female_count}')
+
+
+
 
     # Melt the DataFrame to long format for easier aggregation
     df_melted = df_filtered.melt(id_vars=['B'], value_vars=['C', 'D', 'E', 'F', 'G'],
@@ -61,75 +88,8 @@ def get_gender_type_contingency_table(df):
 
 
 
-# def gender_type_inference(contingency_table, df):
-#     """
-#     Perform inferential analysis of gender × type associations.
+#get_gender_type_contingency_table(load_and_prepare_data(classification_csv_path))
 
-#     Parameters:
-#         contingency_table: pd.DataFrame
-#             With columns ['Type', 'Female', 'Male'] as returned by
-#             get_gender_type_contingency_table().
-#         df: pd.DataFrame
-#             The original prepared DataFrame (columns B=gender, C–G=types),
-#             used to derive true per-gender individual counts.
-
-#     Returns:
-#         results_df: pd.DataFrame
-#             Type-level odds ratios, CIs, p-values, BH-adjusted p-values,
-#             log-odds — sorted by |log-odds| descending.
-#         chi2_result: dict
-#             Global Pearson chi-square statistics (note: observations are
-#             not fully independent across types; treat as descriptive).
-#         standardized_residuals: pd.DataFrame
-#             Pearson residuals matrix (Type × gender).
-#     """
-#     # True unique individual counts per gender — the correct marginals
-#     n_female = (df["B"] == "female").sum()
-#     n_male   = (df["B"] == "male").sum()
-
-#     ct = contingency_table.set_index("Type")
-#     matrix = ct[["Female", "Male"]]
-
-#     # Global chi-square (descriptive; independence assumption not fully met
-#     # because one individual can contribute to multiple type rows)
-#     chi2, p, dof, expected = chi2_contingency(matrix)
-#     expected_df = pd.DataFrame(expected, index=matrix.index, columns=matrix.columns)
-#     standardized_residuals = (matrix - expected_df) / np.sqrt(expected_df)
-
-#     results = []
-#     for type_, row in matrix.iterrows():
-#         a = row["Female"]          # females WITH this type
-#         c = row["Male"]            # males   WITH this type
-#         b = n_female - a           # females WITHOUT this type
-#         d = n_male   - c           # males   WITHOUT this type
-
-#         table = np.array([[a, b], [c, d]], dtype=float)
-#         if (table == 0).any():
-#             table += 0.5           # Haldane-Anscombe continuity correction
-
-#         oddsratio, pvalue = fisher_exact(table)
-#         sm_table = sm.stats.Table2x2(table)
-#         ci_low, ci_high = sm_table.oddsratio_confint()
-
-#         results.append({
-#             "type":         type_,
-#             "female_count": int(a),
-#             "male_count":   int(c),
-#             "odds_ratio":   oddsratio,
-#             "ci_low":       ci_low,
-#             "ci_high":      ci_high,
-#             "p_value":      pvalue,
-#         })
-
-#     results_df = pd.DataFrame(results)
-#     results_df["p_adj"]    = multipletests(results_df["p_value"], method="fdr_bh")[1]
-#     results_df["log_odds"] = np.log(results_df["odds_ratio"].replace(0, np.nan))
-#     results_df = results_df.sort_values(
-#         by="log_odds", key=lambda s: s.abs(), ascending=False
-#     )
-
-#     chi2_result = {"chi2": chi2, "p_value": p, "dof": dof}
-#     return results_df, chi2_result, standardized_residuals
 
 
 
@@ -159,6 +119,8 @@ def gender_type_inference(contingency_table, df):
     # True unique individual counts per gender — the correct marginals
     n_female = (df["B"] == "female").sum()
     n_male   = (df["B"] == "male").sum()
+
+    print(n_female, n_male)
 
     ct = contingency_table.set_index("Type")
     matrix = ct[["Female", "Male"]]
@@ -209,83 +171,7 @@ def gender_type_inference(contingency_table, df):
     return results_df, chi2_result, standardized_residuals
 
 
-
-
-
-
-def gender_type_inference(contingency_table, df):
-    """
-    Perform inferential analysis of gender × type associations.
-
-    Parameters:
-        contingency_table: pd.DataFrame
-            With columns ['Type', 'Female', 'Male'] as returned by
-            get_gender_type_contingency_table().
-        df: pd.DataFrame
-            The original prepared DataFrame (columns B=gender, C–G=types),
-            used to derive true per-gender individual counts.
-
-    Returns:
-        results_df: pd.DataFrame
-            Type-level odds ratios, CIs, p-values, BH-adjusted p-values,
-            log-odds — sorted by |log-odds| descending.
-        chi2_result: dict
-            Global Pearson chi-square statistics (note: observations are
-            not fully independent across types; treat as descriptive).
-        standardized_residuals: pd.DataFrame
-            Pearson residuals matrix (Type × gender).
-    """
-    # True unique individual counts per gender — the correct marginals
-    n_female = (df["B"] == "female").sum()
-    n_male   = (df["B"] == "male").sum()
-
-    ct = contingency_table.set_index("Type")
-    matrix = ct[["Female", "Male"]]
-
-    # Global chi-square (descriptive; independence assumption not fully met
-    # because one individual can contribute to multiple type rows)
-    chi2, p, dof, expected = chi2_contingency(matrix)
-    expected_df = pd.DataFrame(expected, index=matrix.index, columns=matrix.columns)
-    standardized_residuals = (matrix - expected_df) / np.sqrt(expected_df)
-
-    results = []
-    for type_, row in matrix.iterrows():
-        a = row["Female"]          # females WITH this type
-        c = row["Male"]            # males   WITH this type
-        b = n_female - a           # females WITHOUT this type
-        d = n_male   - c           # males   WITHOUT this type
-
-        table = np.array([[a, b], [c, d]], dtype=float)
-        if (table == 0).any():
-            table += 0.5           # Haldane-Anscombe continuity correction
-
-        oddsratio, pvalue = fisher_exact(table)
-        sm_table = sm.stats.Table2x2(table)
-        ci_low, ci_high = sm_table.oddsratio_confint()
-
-        results.append({
-            "type":         type_,
-            "female_count": int(a),
-            "male_count":   int(c),
-            "odds_ratio":   oddsratio,
-            "ci_low":       ci_low,
-            "ci_high":      ci_high,
-            "p_value":      pvalue,
-        })
-
-    results_df = pd.DataFrame(results)
-    results_df["p_adj"]    = multipletests(results_df["p_value"], method="fdr_bh")[1]
-    results_df["log_odds"] = np.log(results_df["odds_ratio"].replace(0, np.nan))
-    results_df = results_df.sort_values(
-        by="log_odds", key=lambda s: s.abs(), ascending=False
-    )
-
-    chi2_result = {"chi2": chi2, "p_value": p, "dof": dof}
-    return results_df, chi2_result, standardized_residuals
-
-
-
-
+# gender_type_inference(get_gender_type_contingency_table(load_and_prepare_data(classification_csv_path)), load_and_prepare_data(classification_csv_path))
 
 
 
