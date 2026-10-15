@@ -562,54 +562,491 @@ def csv_total_sanction_individual():
 
 
 
+# def csv_dataset_frequency_for_sanctioned_gender():
+#     # Connect to the SQLite database
+#     conn = sqlite3.connect(persons_sub_db_path)
+#     cursor = conn.cursor()
+
+#     # Create placeholders for the IN clause (e.g., ?, ?, ?)
+#     placeholders = ', '.join(['?'] * len(valid_dataset_values_list))
+
+#     # SQL query to count unique sanctioned individuals with gender
+#     query = f"""
+#     SELECT dataset,
+#     COUNT(DISTINCT canonical_id) AS occurrence_count
+#     FROM persons
+#     WHERE dataset IN ({placeholders})
+#     AND prop = 'gender'
+#     GROUP BY dataset
+#     ORDER BY occurrence_count DESC;
+#     """
+#     # Execute the query with the list of values
+#     cursor.execute(query, valid_dataset_values_list)
+
+#     # Fetch the results
+#     results = cursor.fetchall()
+#     conn.close()
+
+#     # Convert results to a pandas DataFrame
+#     frequency_table = pd.DataFrame(results, columns=['Dataset Category', 'Frequency'])
+
+#     # Calculate relative frequency and round to 2 decimal places
+#     frequency_table['Relative Frequency(%)'] = round((frequency_table['Frequency'] / 45241) * 100, 2)
+
+#     # Print the title
+#     print("\033[1mTable 3.\033[0m Gender distribution among sanctioned individuals.")
+
+#     # Display frequency table
+#     display(frequency_table.set_index('Dataset Category'))
+
+#     # Bar plot
+#     print("\033[1mFigure 3\033[0m")
+    
+#     plt.figure(figsize=(12, 6))
+#     plt.bar(frequency_table['Dataset Category'], frequency_table['Frequency'], color='skyblue')
+#     plt.title('Distribution of Individual Valid Datasets Providing Gender Information')
+#     plt.xlabel('Dataset Category')
+#     plt.ylabel('Frequency')
+#     plt.xticks(rotation=90)
+#     plt.tight_layout()
+#     plt.show()
+
+
+
+
 def csv_dataset_frequency_for_sanctioned_gender():
     # Connect to the SQLite database
     conn = sqlite3.connect(persons_sub_db_path)
     cursor = conn.cursor()
 
-    # Create placeholders for the IN clause (e.g., ?, ?, ?)
+    # Create placeholders for the IN clause
     placeholders = ', '.join(['?'] * len(valid_dataset_values_list))
 
-    # SQL query to count unique sanctioned individuals with gender
     query = f"""
-    SELECT dataset,
-    COUNT(*) AS occurrence_count
-    FROM persons
-    WHERE dataset IN ({placeholders})
-    AND prop = 'gender'
-    GROUP BY dataset
-    ORDER BY occurrence_count DESC;
-    """
-    # Execute the query with the list of values
-    cursor.execute(query, valid_dataset_values_list)
+    SELECT
+        LOWER(
+            CASE
+                WHEN INSTR(dataset, '_') > 0
+                    THEN SUBSTR(dataset, 1, INSTR(dataset, '_') - 1)
+                WHEN INSTR(dataset, '-') > 0
+                    THEN SUBSTR(dataset, 1, INSTR(dataset, '-') - 1)
+                ELSE dataset
+            END
+        ) AS country,
 
-    # Fetch the results
+        COUNT(DISTINCT canonical_id) AS frequency
+
+    FROM persons
+
+    WHERE dataset IN ({placeholders})
+      AND prop = 'gender'
+      AND value IS NOT NULL
+      AND TRIM(value) <> ''
+
+    GROUP BY country
+
+    ORDER BY frequency DESC;
+    """
+
+    cursor.execute(query, valid_dataset_values_list)
     results = cursor.fetchall()
+
     conn.close()
 
-    # Convert results to a pandas DataFrame
-    frequency_table = pd.DataFrame(results, columns=['Dataset Category', 'Frequency'])
+    # Convert results to DataFrame
+    frequency_table = pd.DataFrame(
+        results,
+        columns=[
+            'Country',
+            'Frequency'
+        ]
+    )
 
-    # Calculate relative frequency and round to 2 decimal places
-    frequency_table['Relative Frequency(%)'] = round((frequency_table['Frequency'] / 45241) * 100, 2)
+    # Total number of unique individuals with gender
+    total_with_gender = frequency_table['Frequency'].sum()
 
-    # Print the title
-    print("\033[1mTable 3.\033[0m Gender distribution among sanctioned individuals.")
+    # Relative frequencies
+    frequency_table['Relative Frequency (%)'] = (
+        frequency_table['Frequency']
+        / total_with_gender
+        * 100
+    ).round(2)
 
-    # Display frequency table
-    display(frequency_table.set_index('Dataset Category'))
+    # Print title
+    print(
+        "\033[1mTable 3.\033[0m "
+        "Distribution of sanctioned individuals with gender information by country."
+    )
+
+    display(frequency_table.set_index('Country'))
 
     # Bar plot
-    print("\033[1mFigure 3\033[0m")
-    
+    print("\033[1mFigure 3.\033[0m")
+
     plt.figure(figsize=(12, 6))
-    plt.bar(frequency_table['Dataset Category'], frequency_table['Frequency'], color='skyblue')
-    plt.title('Distribution of Individual Valid Datasets Providing Gender Information')
-    plt.xlabel('Dataset Category')
+
+    plt.bar(
+        frequency_table['Country'],
+        frequency_table['Frequency']
+    )
+
+    plt.title(
+        'Distribution of sanctioned individuals with gender information by country'
+    )
+
+    plt.xlabel('Country')
     plt.ylabel('Frequency')
+
     plt.xticks(rotation=90)
+
     plt.tight_layout()
     plt.show()
+
+
+
+
+
+
+
+
+
+
+
+# def dataset_gender_contingency_table():
+#     # Connect to the SQLite database
+#     conn = sqlite3.connect(persons_sub_db_path)
+#     cursor = conn.cursor()
+
+#     # Create placeholders for the IN clause
+#     placeholders = ', '.join(['?'] * len(valid_dataset_values_list))
+
+#     query = f"""
+#     SELECT
+#         dataset,
+
+#         -- Total number of unique individuals in the dataset
+#         COUNT(DISTINCT canonical_id) AS total_individuals,
+
+#         -- Unique individuals having a non-empty gender value
+#         COUNT(DISTINCT CASE
+#             WHEN prop = 'gender'
+#                  AND value IS NOT NULL
+#                  AND TRIM(value) <> ''
+#             THEN canonical_id
+#         END) AS gender_absolute
+
+#     FROM persons
+#     WHERE dataset IN ({placeholders})
+#     GROUP BY dataset
+#     ORDER BY dataset;
+#     """
+
+#     cursor.execute(query, valid_dataset_values_list)
+#     results = cursor.fetchall()
+
+#     conn.close()
+
+#     # Convert SQL results to DataFrame
+#     frequency_table = pd.DataFrame(
+#         results,
+#         columns=[
+#             'dataset',
+#             'total_individuals',
+#             'gender_absolute'
+#         ]
+#     )
+
+#     # Individuals without a non-empty gender value
+#     frequency_table['not gender absolute'] = (
+#         frequency_table['total_individuals']
+#         - frequency_table['gender_absolute']
+#     )
+
+#     # Relative frequencies within each dataset
+#     frequency_table['gender relative'] = (
+#         frequency_table['gender_absolute']
+#         / frequency_table['total_individuals']
+#         * 100
+#     )
+
+#     frequency_table['not gender relative'] = (
+#         frequency_table['not gender absolute']
+#         / frequency_table['total_individuals']
+#         * 100
+#     )
+
+#     # Round relative frequencies
+#     frequency_table['gender relative'] = (
+#         frequency_table['gender relative'].round(2)
+#     )
+
+#     frequency_table['not gender relative'] = (
+#         frequency_table['not gender relative'].round(2)
+#     )
+
+#     # Keep only the requested columns
+#     frequency_table = frequency_table[
+#         [
+#             'dataset',
+#             'gender_absolute',
+#             'gender relative',
+#             'not gender absolute',
+#             'not gender relative'
+#         ]
+#     ]
+
+#     # Print title
+#     print(
+#         "\033[1mTable X.\033[0m "
+#         "Availability of gender information across datasets."
+#     )
+
+#     # Display table
+#     display(frequency_table.set_index('dataset'))
+
+
+
+# print 1 single table, in descending order
+
+def dataset_gender_contingency_single_table():
+    import sqlite3
+    import pandas as pd
+
+    # Connect to the SQLite database
+    conn = sqlite3.connect(persons_sub_db_path)
+    cursor = conn.cursor()
+
+    # Create placeholders for the IN clause
+    placeholders = ', '.join(['?'] * len(valid_dataset_values_list))
+
+    query = f"""
+    SELECT
+        LOWER(
+            CASE
+                WHEN INSTR(dataset, '_') > 0
+                    THEN SUBSTR(dataset, 1, INSTR(dataset, '_') - 1)
+                WHEN INSTR(dataset, '-') > 0
+                    THEN SUBSTR(dataset, 1, INSTR(dataset, '-') - 1)
+                ELSE dataset
+            END
+        ) AS country,
+
+        -- Total number of unique individuals for the country
+        COUNT(DISTINCT canonical_id) AS total_individuals,
+
+        -- Unique individuals having a non-empty gender value
+        COUNT(DISTINCT CASE
+            WHEN prop = 'gender'
+                 AND value IS NOT NULL
+                 AND TRIM(value) <> ''
+            THEN canonical_id
+        END) AS gender_absolute
+
+    FROM persons
+    WHERE dataset IN ({placeholders})
+
+    GROUP BY country
+
+    ORDER BY gender_absolute DESC;
+    """
+
+    cursor.execute(query, valid_dataset_values_list)
+    results = cursor.fetchall()
+
+    conn.close()
+
+    # Convert SQL results to DataFrame
+    frequency_table = pd.DataFrame(
+        results,
+        columns=[
+            'country',
+            'total_individuals',
+            'gender_absolute'
+        ]
+    )
+
+    # Individuals without a non-empty gender value
+    frequency_table['not gender absolute'] = (
+        frequency_table['total_individuals']
+        - frequency_table['gender_absolute']
+    )
+
+    # Relative frequencies within each country
+    frequency_table['gender relative'] = (
+        frequency_table['gender_absolute']
+        / frequency_table['total_individuals']
+        * 100
+    )
+
+    frequency_table['not gender relative'] = (
+        frequency_table['not gender absolute']
+        / frequency_table['total_individuals']
+        * 100
+    )
+
+    # Round relative frequencies
+    frequency_table['gender relative'] = (
+        frequency_table['gender relative'].round(2)
+    )
+
+    frequency_table['not gender relative'] = (
+        frequency_table['not gender relative'].round(2)
+    )
+
+    # Keep only the requested columns
+    frequency_table = frequency_table[
+        [
+            'country',
+            'gender_absolute',
+            'gender relative',
+            'not gender absolute',
+            'not gender relative'
+        ]
+    ]
+
+    # Print title
+    print(
+        "\033[1mTable X.\033[0m "
+        "Availability of gender information by country source."
+    )
+
+    # Display table
+    display(frequency_table.set_index('country'))
+
+
+
+
+
+# print 2 separate tables, both in descending order
+
+def dataset_gender_contingency_separate_tables():
+    import sqlite3
+    import pandas as pd
+
+    # Connect to the SQLite database
+    conn = sqlite3.connect(persons_sub_db_path)
+    cursor = conn.cursor()
+
+    # Create placeholders for the IN clause
+    placeholders = ', '.join(['?'] * len(valid_dataset_values_list))
+
+    query = f"""
+    SELECT
+        LOWER(
+            CASE
+                WHEN INSTR(dataset, '_') > 0
+                    THEN SUBSTR(dataset, 1, INSTR(dataset, '_') - 1)
+                WHEN INSTR(dataset, '-') > 0
+                    THEN SUBSTR(dataset, 1, INSTR(dataset, '-') - 1)
+                ELSE dataset
+            END
+        ) AS country,
+
+        -- Total number of unique individuals for the country
+        COUNT(DISTINCT canonical_id) AS total_individuals,
+
+        -- Unique individuals having a non-empty gender value
+        COUNT(DISTINCT CASE
+            WHEN prop = 'gender'
+                 AND value IS NOT NULL
+                 AND TRIM(value) <> ''
+            THEN canonical_id
+        END) AS gender_absolute
+
+    FROM persons
+    WHERE dataset IN ({placeholders})
+
+    GROUP BY country;
+    """
+
+    cursor.execute(query, valid_dataset_values_list)
+    results = cursor.fetchall()
+
+    conn.close()
+
+    # Convert SQL results to DataFrame
+    frequency_table = pd.DataFrame(
+        results,
+        columns=[
+            'country',
+            'total_individuals',
+            'gender_absolute'
+        ]
+    )
+
+    # Individuals without a non-empty gender value
+    frequency_table['not gender absolute'] = (
+        frequency_table['total_individuals']
+        - frequency_table['gender_absolute']
+    )
+
+    # Relative frequencies within each country
+    frequency_table['gender relative'] = (
+        frequency_table['gender_absolute']
+        / frequency_table['total_individuals']
+        * 100
+    )
+
+    frequency_table['not gender relative'] = (
+        frequency_table['not gender absolute']
+        / frequency_table['total_individuals']
+        * 100
+    )
+
+    # Round relative frequencies
+    frequency_table['gender relative'] = (
+        frequency_table['gender relative'].round(2)
+    )
+
+    frequency_table['not gender relative'] = (
+        frequency_table['not gender relative'].round(2)
+    )
+
+    # Columns for the two tables
+    gender_table = frequency_table[
+        [
+            'country',
+            'gender_absolute',
+            'gender relative'
+        ]
+    ].sort_values(
+        by='gender_absolute',
+        ascending=False
+    )
+
+    not_gender_table = frequency_table[
+        [
+            'country',
+            'not gender absolute',
+            'not gender relative'
+        ]
+    ].sort_values(
+        by='not gender absolute',
+        ascending=False
+    )
+
+    # Print first table
+    print(
+        "\033[1mTable X.\033[0m "
+        "Availability of gender information across countries."
+    )
+
+    display(gender_table.set_index('country'))
+
+    # Print second table
+    print(
+        "\033[1mTable X.\033[0m "
+        "Absence of gender information across countries."
+    )
+
+    display(not_gender_table.set_index('country'))
+
+
+
+
+
+
+
 
 
 

@@ -341,13 +341,171 @@ def csv_sanctioned_gender_topics_frequency(mapping_dict=None, min_count=0):
 
 
     
+# def csv_sanctioned_gender_specific_topics_frequency(min_count=0):
+#     """
+#     Generate a unified relative frequency table and bar plot for all genders vs. topics for sanctioned individuals.
+
+#     Parameters:
+#     - min_count: int (minimum count to include a topic in the plot and table)
+#     """
+#     # Connect to the SQLite database
+#     conn = sqlite3.connect(persons_sub_db_path)
+#     cursor = conn.cursor()
+
+#     # SQL query to get the frequency table for all genders
+#     query = """
+#         WITH
+#         -- Individuals with at least one 'sanction' or 'sanction.counter' in topics
+#         sanctioned_individuals AS (
+#             SELECT DISTINCT canonical_id
+#             FROM persons_topics
+#             WHERE prop = 'topics' AND value IN ('sanction', 'sanction.counter')
+#         ),
+
+#         -- Individuals with at least one other topics value (not 'sanction' or 'sanction.counter')
+#         other_topics_individuals AS (
+#             SELECT DISTINCT canonical_id
+#             FROM persons_topics
+#             WHERE prop = 'topics' AND value NOT IN ('sanction', 'sanction.counter')
+#         ),
+
+#         -- Individuals meeting both criteria
+#         valid_individuals AS (
+#             SELECT canonical_id
+#             FROM sanctioned_individuals
+#             INTERSECT
+#             SELECT canonical_id
+#             FROM other_topics_individuals
+#         ),
+
+#         -- Gender data for valid individuals
+#         gender_data AS (
+#             SELECT p.canonical_id, p.value AS gender
+#             FROM persons_topics p
+#             JOIN valid_individuals v ON p.canonical_id = v.canonical_id
+#             WHERE p.prop = 'gender'
+#         ),
+
+#         -- Topics data for valid individuals
+#         topics_data AS (
+#             SELECT p.canonical_id, p.value AS topics
+#             FROM persons_topics p
+#             JOIN valid_individuals v ON p.canonical_id = v.canonical_id
+#             WHERE p.prop = 'topics'
+#         ),
+
+#         -- Contingency table: gender × topics
+#         gender_topics AS (
+#             SELECT
+#                 g.gender,
+#                 t.topics,
+#                 COUNT(DISTINCT g.canonical_id) AS count
+#             FROM
+#                 gender_data g
+#             JOIN
+#                 topics_data t ON g.canonical_id = t.canonical_id
+#             GROUP BY
+#                 g.gender, t.topics
+#         ),
+
+#         -- Total count of individuals for each gender
+#         total_counts AS (
+#             SELECT
+#                 gender,
+#                 COUNT(DISTINCT canonical_id) AS total
+#             FROM
+#                 gender_data
+#             GROUP BY
+#                 gender
+#         )
+
+#         -- Frequency table with relative frequency for all genders
+#         SELECT
+#             gt.gender,
+#             gt.topics,
+#             gt.count,
+#             ROUND((gt.count * 100.0 / tc.total), 2) AS relative_frequency
+#         FROM
+#             gender_topics gt
+#         JOIN
+#             total_counts tc ON gt.gender = tc.gender
+#         ORDER BY
+#             gt.gender, gt.count DESC;
+#     """
+
+#     # Execute the query
+#     cursor.execute(query)
+#     results = cursor.fetchall()
+#     conn.close()
+
+#     # Convert results to a DataFrame
+#     df = pd.DataFrame(results, columns=['Gender', 'Risk labels', 'Frequency', 'Relative Frequency'])
+
+#     df = df[~df['Risk labels'].isin(['asset.frozen', 'reg.action'])]
+
+#     df['Risk labels'] = df['Risk labels'].map(topic_mapping)
+
+#     # Filter topics with count >= min_count
+#     if min_count > 0:
+#         df = df[df['Frequency'] >= min_count]
+
+#     # Pivot the DataFrame for frequencies
+#     pivot_freq = df.pivot(index='Risk labels', columns='Gender', values='Frequency').reset_index()
+#     # Pivot the DataFrame for relative frequencies
+#     pivot_rel_freq = df.pivot(index='Risk labels', columns='Gender', values='Relative Frequency').reset_index()
+
+#     # Merge the two pivoted DataFrames
+#     pivot_df = pd.merge(pivot_freq, pivot_rel_freq, on='Risk labels', suffixes=('_freq', '_rel_freq'))
+
+#     # Rename columns for clarity
+#     pivot_df.columns = [
+#         'Risk labels',
+#         'female_freq', 'male_freq',
+#         'female_rel_freq', 'male_rel_freq'
+#     ]
+
+#     # Fill NaN values with 0 before converting to integers
+#     pivot_df['female_freq'] = pivot_df['female_freq'].fillna(0).astype(int)
+#     pivot_df['male_freq'] = pivot_df['male_freq'].fillna(0).astype(int)
+
+#     # Create a grouped bar plot for relative frequencies
+#     plt.figure(figsize=(14, 8))
+#     ax = pivot_df.plot(
+#         x='Risk labels',
+#         y=['female_rel_freq', 'male_rel_freq'],
+#         kind='bar',
+#         stacked=False,
+#         ax=plt.gca(),
+#         colormap='viridis'
+#     )
+#     plt.title(f'Relative Frequency of Topics by Gender (Count >= {min_count})')
+#     plt.xlabel('Risk labels')
+#     plt.ylabel('Relative Frequency (%)')
+#     plt.xticks(rotation=45, ha='right')
+#     plt.legend(title='Gender')
+#     plt.tight_layout()
+#     plt.show()
+
+#     # Set pandas display options
+#     pd.set_option('display.max_rows', None)
+#     pd.set_option('display.max_columns', None)
+#     pd.set_option('display.width', None)
+#     pd.set_option('display.max_colwidth', None)
+
+#     display(pivot_df.set_index('Risk labels'))
+
+
+
+
 def csv_sanctioned_gender_specific_topics_frequency(min_count=0):
     """
-    Generate a unified relative frequency table and bar plot for all genders vs. topics for sanctioned individuals.
+    Generate a unified relative frequency table and bar plot for all genders
+    vs. topics for sanctioned individuals.
 
     Parameters:
     - min_count: int (minimum count to include a topic in the plot and table)
     """
+
     # Connect to the SQLite database
     conn = sqlite3.connect(persons_sub_db_path)
     cursor = conn.cursor()
@@ -359,14 +517,17 @@ def csv_sanctioned_gender_specific_topics_frequency(min_count=0):
         sanctioned_individuals AS (
             SELECT DISTINCT canonical_id
             FROM persons_topics
-            WHERE prop = 'topics' AND value IN ('sanction', 'sanction.counter')
+            WHERE prop = 'topics'
+              AND value IN ('sanction', 'sanction.counter')
         ),
 
-        -- Individuals with at least one other topics value (not 'sanction' or 'sanction.counter')
+        -- Individuals with at least one other topics value
+        -- (not 'sanction' or 'sanction.counter')
         other_topics_individuals AS (
             SELECT DISTINCT canonical_id
             FROM persons_topics
-            WHERE prop = 'topics' AND value NOT IN ('sanction', 'sanction.counter')
+            WHERE prop = 'topics'
+              AND value NOT IN ('sanction', 'sanction.counter')
         ),
 
         -- Individuals meeting both criteria
@@ -382,7 +543,8 @@ def csv_sanctioned_gender_specific_topics_frequency(min_count=0):
         gender_data AS (
             SELECT p.canonical_id, p.value AS gender
             FROM persons_topics p
-            JOIN valid_individuals v ON p.canonical_id = v.canonical_id
+            JOIN valid_individuals v
+                ON p.canonical_id = v.canonical_id
             WHERE p.prop = 'gender'
         ),
 
@@ -390,7 +552,8 @@ def csv_sanctioned_gender_specific_topics_frequency(min_count=0):
         topics_data AS (
             SELECT p.canonical_id, p.value AS topics
             FROM persons_topics p
-            JOIN valid_individuals v ON p.canonical_id = v.canonical_id
+            JOIN valid_individuals v
+                ON p.canonical_id = v.canonical_id
             WHERE p.prop = 'topics'
         ),
 
@@ -400,35 +563,34 @@ def csv_sanctioned_gender_specific_topics_frequency(min_count=0):
                 g.gender,
                 t.topics,
                 COUNT(DISTINCT g.canonical_id) AS count
-            FROM
-                gender_data g
-            JOIN
-                topics_data t ON g.canonical_id = t.canonical_id
+            FROM gender_data g
+            JOIN topics_data t
+                ON g.canonical_id = t.canonical_id
             GROUP BY
                 g.gender, t.topics
         ),
 
-        -- Total count of individuals for each gender
+        -- Total number of distinct individuals for each gender
         total_counts AS (
             SELECT
                 gender,
                 COUNT(DISTINCT canonical_id) AS total
-            FROM
-                gender_data
-            GROUP BY
-                gender
+            FROM gender_data
+            GROUP BY gender
         )
 
-        -- Frequency table with relative frequency for all genders
+        -- Frequency table with relative frequency
         SELECT
             gt.gender,
             gt.topics,
             gt.count,
+            tc.total,
             ROUND((gt.count * 100.0 / tc.total), 2) AS relative_frequency
         FROM
             gender_topics gt
         JOIN
-            total_counts tc ON gt.gender = tc.gender
+            total_counts tc
+                ON gt.gender = tc.gender
         ORDER BY
             gt.gender, gt.count DESC;
     """
@@ -439,10 +601,35 @@ def csv_sanctioned_gender_specific_topics_frequency(min_count=0):
     conn.close()
 
     # Convert results to a DataFrame
-    df = pd.DataFrame(results, columns=['Gender', 'Risk labels', 'Frequency', 'Relative Frequency'])
+    df = pd.DataFrame(
+        results,
+        columns=[
+            'Gender',
+            'Risk labels',
+            'Frequency',
+            'Total',
+            'Relative Frequency'
+        ]
+    )
 
-    df = df[~df['Risk labels'].isin(['asset.frozen', 'reg.action'])]
+    # Print total number of individuals by gender
+    print("\nTotal individuals by gender:")
+    print(
+        df[['Gender', 'Total']]
+        .drop_duplicates()
+        .sort_values('Gender')
+        .to_string(index=False)
+    )
 
+    # Remove unwanted labels
+    df = df[
+        ~df['Risk labels'].isin([
+            'asset.frozen',
+            'reg.action'
+        ])
+    ]
+
+    # Human-readable labels
     df['Risk labels'] = df['Risk labels'].map(topic_mapping)
 
     # Filter topics with count >= min_count
@@ -450,26 +637,58 @@ def csv_sanctioned_gender_specific_topics_frequency(min_count=0):
         df = df[df['Frequency'] >= min_count]
 
     # Pivot the DataFrame for frequencies
-    pivot_freq = df.pivot(index='Risk labels', columns='Gender', values='Frequency').reset_index()
+    pivot_freq = (
+        df.pivot(
+            index='Risk labels',
+            columns='Gender',
+            values='Frequency'
+        )
+        .reset_index()
+    )
+
     # Pivot the DataFrame for relative frequencies
-    pivot_rel_freq = df.pivot(index='Risk labels', columns='Gender', values='Relative Frequency').reset_index()
+    pivot_rel_freq = (
+        df.pivot(
+            index='Risk labels',
+            columns='Gender',
+            values='Relative Frequency'
+        )
+        .reset_index()
+    )
 
     # Merge the two pivoted DataFrames
-    pivot_df = pd.merge(pivot_freq, pivot_rel_freq, on='Risk labels', suffixes=('_freq', '_rel_freq'))
+    pivot_df = pd.merge(
+        pivot_freq,
+        pivot_rel_freq,
+        on='Risk labels',
+        suffixes=('_freq', '_rel_freq')
+    )
 
     # Rename columns for clarity
     pivot_df.columns = [
         'Risk labels',
-        'female_freq', 'male_freq',
-        'female_rel_freq', 'male_rel_freq'
+        'female_freq',
+        'male_freq',
+        'female_rel_freq',
+        'male_rel_freq'
     ]
 
     # Fill NaN values with 0 before converting to integers
-    pivot_df['female_freq'] = pivot_df['female_freq'].fillna(0).astype(int)
-    pivot_df['male_freq'] = pivot_df['male_freq'].fillna(0).astype(int)
+    pivot_df['female_freq'] = (
+        pivot_df['female_freq']
+        .fillna(0)
+        .astype(int)
+    )
+
+    pivot_df['male_freq'] = (
+        pivot_df['male_freq']
+        .fillna(0)
+        .astype(int)
+    )
 
     # Create a grouped bar plot for relative frequencies
     plt.figure(figsize=(14, 8))
+
     ax = pivot_df.plot(
         x='Risk labels',
         y=['female_rel_freq', 'male_rel_freq'],
@@ -478,7 +697,10 @@ def csv_sanctioned_gender_specific_topics_frequency(min_count=0):
         ax=plt.gca(),
         colormap='viridis'
     )
-    plt.title(f'Relative Frequency of Topics by Gender (Count >= {min_count})')
+
+    plt.title(
+        f'Relative Frequency of Topics by Gender (Count >= {min_count})'
+    )
     plt.xlabel('Risk labels')
     plt.ylabel('Relative Frequency (%)')
     plt.xticks(rotation=45, ha='right')
@@ -492,10 +714,16 @@ def csv_sanctioned_gender_specific_topics_frequency(min_count=0):
     pd.set_option('display.width', None)
     pd.set_option('display.max_colwidth', None)
 
-    display(pivot_df.set_index('Risk labels'))
-    
+    # Display final table
+    display(
+        pivot_df.set_index('Risk labels')
+    )
 
 
+
+
+
+print(csv_sanctioned_gender_specific_topics_frequency())
 
 
 
