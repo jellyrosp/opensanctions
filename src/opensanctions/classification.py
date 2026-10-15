@@ -120,7 +120,6 @@ def gender_type_inference(contingency_table, df):
     n_female = (df["B"] == "female").sum()
     n_male   = (df["B"] == "male").sum()
 
-    print(n_female, n_male)
 
     ct = contingency_table.set_index("Type")
     matrix = ct[["Female", "Male"]]
